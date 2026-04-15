@@ -1,6 +1,6 @@
 # 歧路 Web
 
-歧路第一版前端产品外壳。项目基于 Next.js、React、Tailwind CSS 和 axios，当前实现 MVP 所需的认证、登录态恢复、内容流首页和个人中心。
+歧路第一版前端产品外壳。项目基于 Next.js、React 和 Tailwind CSS，当前实现 MVP 所需的认证、登录态恢复、内容流首页和个人中心。
 
 ## 运行
 
@@ -38,10 +38,10 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 
 ## 请求层
 
-- `src/lib/http.ts` 创建统一 axios 实例。
+- `src/lib/http.ts` 封装统一 `fetch` 请求入口。
 - 通过 `NEXT_PUBLIC_API_BASE_URL` 配置 `baseURL`，默认 `http://localhost:8080`。
-- 请求拦截器会为注册、登录之外的请求自动注入 `Authorization: Bearer <token>`。
-- 响应拦截器统一处理 `{ code, message, data }`，并在 401 时清除本地 token。
+- 注册、登录之外的请求默认注入 `Authorization: Bearer <token>`。
+- 响应统一处理 `{ code, message, data }`，并在 401 时清除本地 token。
 
 ## 目录
 
@@ -50,7 +50,7 @@ src/app              App Router 页面
 src/components/product-shell.tsx  登录后产品主界面组件
 src/components/auth 认证页结构组件
 src/components/ui   基础 UI 组件
-src/lib/http.ts     axios 实例、拦截器和错误处理
+src/lib/http.ts     fetch 请求封装和错误处理
 src/lib/api.ts      业务 API 方法
 src/lib/auth.ts     token 读写与清除
 src/lib/use-current-user.ts 登录态恢复 hook

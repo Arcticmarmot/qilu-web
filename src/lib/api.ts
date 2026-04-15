@@ -20,24 +20,21 @@ export function registerUser(input: {
   email: string;
   password: string;
 }) {
-  return request<User>({
-    url: "/users",
+  return request<User>("/users", {
     method: "POST",
-    data: input,
+    body: input,
+    auth: false,
   });
 }
 
 export function login(input: { email: string; password: string }) {
-  return request<LoginResponse>({
-    url: "/auth/login",
+  return request<LoginResponse>("/auth/login", {
     method: "POST",
-    data: input,
+    body: input,
+    auth: false,
   });
 }
 
 export function getCurrentUser() {
-  return request<User>({
-    url: "/users/me",
-    method: "GET",
-  });
+  return request<User>("/users/me");
 }

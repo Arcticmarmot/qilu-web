@@ -1,14 +1,9 @@
-import axios, {
-  AxiosError,
-  AxiosHeaders,
-  type AxiosRequestConfig,
-  type InternalAxiosRequestConfig,
-} from "axios";
 import { clearToken, getToken } from "@/lib/auth";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
   "http://localhost:8080";
+const REQUEST_TIMEOUT_MS = 12000;
 
 type ApiResponse<T> = {
   code: number;
@@ -16,70 +11,64 @@ type ApiResponse<T> = {
   data: T;
 };
 
-const PUBLIC_REQUESTS = [
-  { method: "POST", url: "/auth/login" },
-  { method: "POST", url: "/users" },
-];
+type RequestOptions = {
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  body?: unknown;
+  auth?: boolean;
+};
 
-export const http = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 12000,
-  headers: {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  },
-});
-
-function isPublicRequest(config: InternalAxiosRequestConfig) {
-  const method = config.method?.toUpperCase() ?? "GET";
-  const url = config.url ?? "";
-
-  return PUBLIC_REQUESTS.some(
-    (requestConfig) =>
-      requestConfig.method === method && requestConfig.url === url,
+export async function request<T>(path: string, options: RequestOptions = {}) {
+  const { method = "GET", body, auth = true } = options;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT_MS,
   );
-}
 
-http.interceptors.request.use((config) => {
-  const headers = AxiosHeaders.from(config.headers);
+  try {
+    const headers = new Headers({
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    });
 
-  if (!isPublicRequest(config)) {
-    const token = getToken();
-
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-  }
-
-  config.headers = headers;
-  return config;
-});
-
-http.interceptors.response.use(
-  (response) => {
-    const payload = response.data as ApiResponse<unknown>;
-
-    if (payload.code !== 200) {
-      return Promise.reject(new Error(payload.message || "请求失败"));
+    // 公开接口显式关闭鉴权，其余请求统一携带本地 JWT。
+    if (auth) {
+      const token = getToken();
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
     }
 
-    response.data = payload.data;
-    return response;
-  },
-  (error: AxiosError<ApiResponse<unknown>>) => {
-    if (error.response?.status === 401) {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (response.status === 401) {
       clearToken();
     }
 
-    const message =
-      error.response?.data?.message ||
-      error.message ||
-      "网络异常，请稍后重试";
+    const payload = (await response.json()) as ApiResponse<T>;
 
-    return Promise.reject(new Error(message));
-  },
-);
+    // 后端响应固定为 { code, message, data }，统一在请求层拆包。
+    if (!response.ok || payload.code !== 200) {
+      throw new Error(payload.message || "请求失败");
+    }
 
-export function request<T>(config: AxiosRequestConfig) {
-  return http.request<T>(config).then((response) => response.data);
+    return payload.data;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("请求超时，请稍后重试");
+    }
+
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error("网络异常，请稍后重试");
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

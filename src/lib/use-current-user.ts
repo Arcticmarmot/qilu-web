@@ -19,6 +19,7 @@ export function useCurrentUser() {
       return;
     }
 
+    // 路由只判断本地 token 是否存在，真实登录态以 /users/me 为准。
     getCurrentUser()
       .then((currentUser) => {
         setUser(currentUser);
