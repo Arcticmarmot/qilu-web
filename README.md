@@ -17,7 +17,7 @@ http://localhost:3000
 
 ## API Base URL
 
-前端通过 `NEXT_PUBLIC_API_BASE_URL` 读取后端地址，不在组件中硬编码接口域名。
+前端默认通过 Next.js 同源代理访问后端，避免浏览器 CORS 预检失败。浏览器侧请求 `/api/backend/*`，Next 服务端再转发到真实后端。
 
 ```bash
 cp .env.example .env.local
@@ -26,7 +26,8 @@ cp .env.example .env.local
 按本地后端端口修改 `.env.local`：
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+NEXT_PUBLIC_API_BASE_URL=/api/backend
+QILU_API_BASE_URL=http://localhost:8080
 ```
 
 ## 已实现页面
@@ -39,7 +40,8 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ## 请求层
 
 - `src/lib/http.ts` 创建统一 axios 实例。
-- 通过 `NEXT_PUBLIC_API_BASE_URL` 配置 `baseURL`。
+- 通过 `NEXT_PUBLIC_API_BASE_URL` 配置浏览器侧 `baseURL`，默认 `/api/backend`。
+- `src/app/api/backend/[...path]/route.ts` 负责同源代理，后端地址通过 `QILU_API_BASE_URL` 配置。
 - 请求拦截器会为注册、登录之外的请求自动注入 `Authorization: Bearer <token>`。
 - 响应拦截器统一处理 `{ code, message, data }`，并在 401 时清除本地 token。
 

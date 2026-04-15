@@ -31,6 +31,7 @@ export function ContentCard({
           src={image}
           alt=""
           fill
+          unoptimized
           sizes="(min-width: 1280px) 28vw, (min-width: 640px) 44vw, 90vw"
           className="object-cover opacity-80"
         />
