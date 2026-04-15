@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AppHeader } from "@/components/app/app-header";
-import { PageLoading } from "@/components/app/page-loading";
+import { AppHeader, PageLoading } from "@/components/product-shell";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { useCurrentUser } from "@/lib/use-current-user";
 
 export default function ProfilePage() {
   const { user, error, isLoading } = useCurrentUser();

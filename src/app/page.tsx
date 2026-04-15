@@ -1,12 +1,10 @@
 "use client";
 
-import { AppHeader } from "@/components/app/app-header";
-import { ContentCard } from "@/components/app/content-card";
-import { PageLoading } from "@/components/app/page-loading";
+import { AppHeader, ContentCard, PageLoading } from "@/components/product-shell";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { useCurrentUser } from "@/lib/use-current-user";
 
 const contentItems = [
   {

@@ -5,18 +5,36 @@ type QiluMarkProps = {
 };
 
 export function QiluMark({ size = "md" }: QiluMarkProps) {
+  const svgSize = size === "lg" ? 56 : 40;
+
   return (
     <div
       className={cx(
-        "relative rounded-md border border-line bg-panel",
+        "flex items-center justify-center rounded-md border border-line bg-panel",
         size === "lg" ? "h-14 w-14" : "h-10 w-10",
       )}
       aria-hidden="true"
     >
-      <span className="absolute left-1/2 top-2 bottom-2 w-px -translate-x-1/2 bg-accent" />
-      <span className="absolute left-1/2 top-1/2 h-px w-1/3 bg-line" />
-      <span className="absolute right-1/2 bottom-1/2 h-px w-1/3 bg-line" />
-      <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent" />
+      <svg
+        width={svgSize}
+        height={svgSize}
+        viewBox="0 0 56 56"
+        fill="none"
+        className="h-full w-full p-2.5"
+      >
+        <path
+          d="M8 28H24M24 28L39 16M24 28L39 40M39 16H48M39 40H48"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-accent"
+        />
+        <circle cx="8" cy="28" r="3" className="fill-muted" />
+        <circle cx="24" cy="28" r="3.5" className="fill-accent" />
+        <circle cx="48" cy="16" r="3" className="fill-muted" />
+        <circle cx="48" cy="40" r="3" className="fill-muted" />
+      </svg>
     </div>
   );
 }
