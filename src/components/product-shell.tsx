@@ -31,6 +31,12 @@ export function AppHeader() {
 
         <nav className="flex items-center gap-2">
           <Link
+            href="/posts/new"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-foreground px-4 text-sm font-medium text-background transition hover:bg-accent-strong"
+          >
+            发帖
+          </Link>
+          <Link
             href="/profile"
             className="inline-flex h-10 items-center justify-center rounded-md border border-line px-4 text-sm text-foreground transition hover:border-accent hover:text-accent"
           >

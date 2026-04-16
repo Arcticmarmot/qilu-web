@@ -8,6 +8,14 @@ export type User = {
   createdAt: string;
 };
 
+export type Post = {
+  uuid?: string;
+  id?: string;
+  title: string;
+  content: string;
+  createdAt?: string;
+};
+
 type LoginResponse = {
   token: string;
   uuid: string;
@@ -37,4 +45,11 @@ export function login(input: { email: string; password: string }) {
 
 export function getCurrentUser() {
   return request<User>("/users/me");
+}
+
+export function createPost(input: { title: string; content: string }) {
+  return request<Post>("/posts", {
+    method: "POST",
+    body: input,
+  });
 }

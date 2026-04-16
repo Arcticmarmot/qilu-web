@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AppHeader, ContentCard, PageLoading } from "@/components/product-shell";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -88,10 +89,24 @@ export default function Home() {
               <p className="mt-4 max-w-2xl text-sm leading-7 text-muted">
                 内容先以推荐流的形态生长。每张卡片是一枚节点，沿着不同方向延展，但仍归于同一条产品路径。
               </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href="/posts/new"
+                  className="inline-flex h-11 items-center justify-center rounded-md bg-foreground px-5 text-sm font-medium text-background transition hover:bg-accent-strong"
+                >
+                  写一篇新帖子
+                </Link>
+                <a
+                  href="#feed"
+                  className="inline-flex h-11 items-center justify-center rounded-md border border-line px-5 text-sm text-foreground transition hover:border-accent hover:text-accent"
+                >
+                  浏览内容流
+                </a>
+              </div>
             </div>
           </div>
 
-          <div className="columns-1 gap-5 sm:columns-2 xl:columns-3 [&>*]:mb-5">
+          <div id="feed" className="columns-1 gap-5 sm:columns-2 xl:columns-3 [&>*]:mb-5">
             {contentItems.map((item) => (
               <ContentCard key={item.title} {...item} />
             ))}
@@ -120,8 +135,8 @@ export default function Home() {
           </Card>
 
           <EmptyState
-            title="内容接口待接入"
-            description="当前推荐流为前端 MVP 占位，不新增后端接口。后续只需替换数据来源，保留同一套卡片结构。"
+            title="从这里开始"
+            description="写下标题和正文，发布后内容会提交到后端帖子接口。"
           />
         </aside>
       </div>
