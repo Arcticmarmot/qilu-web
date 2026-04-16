@@ -10,7 +10,7 @@ export function QiluMark({ size = "md" }: QiluMarkProps) {
   return (
     <div
       className={cx(
-        "flex items-center justify-center rounded-md border border-line bg-panel",
+        "flex items-center justify-center rounded-md border border-line bg-foreground text-foreground shadow-subtle",
         size === "lg" ? "h-14 w-14" : "h-10 w-10",
       )}
       aria-hidden="true"
@@ -22,18 +22,29 @@ export function QiluMark({ size = "md" }: QiluMarkProps) {
         fill="none"
         className="h-full w-full p-2.5"
       >
+        <rect x="8" y="8" width="40" height="40" rx="8" className="fill-background" />
         <path
-          d="M8 28H24M24 28L39 16M24 28L39 40M39 16H48M39 40H48"
+          d="M28 43V30"
           stroke="currentColor"
-          strokeWidth="3"
+          strokeWidth="5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-accent"
         />
-        <circle cx="8" cy="28" r="3" className="fill-muted" />
-        <circle cx="24" cy="28" r="3.5" className="fill-accent" />
-        <circle cx="48" cy="16" r="3" className="fill-muted" />
-        <circle cx="48" cy="40" r="3" className="fill-muted" />
+        <path
+          d="M28 30L17 17"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M28 30L39 17"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="28" cy="30" r="3.5" className="fill-accent-strong" />
       </svg>
     </div>
   );

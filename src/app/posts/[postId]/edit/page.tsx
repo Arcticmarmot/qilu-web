@@ -1,33 +1,73 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { AppHeader, PageLoading } from "@/components/product-shell";
 import { Button } from "@/components/ui/button";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { Input } from "@/components/ui/input";
-import { createPost } from "@/lib/api";
+import { getPost, updatePost } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 const MAX_TITLE_LENGTH = 128;
 const MAX_CONTENT_LENGTH = 4096;
 
-export default function NewPostPage() {
+function getParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default function EditPostPage() {
   const router = useRouter();
-  const { user, error: userError, isLoading } = useCurrentUser();
+  const params = useParams();
+  const postId = getParam(params.postId);
+  const { error: userError, isLoading: isUserLoading } = useCurrentUser();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [visibility, setVisibility] = useState<1 | 2>(1);
   const [error, setError] = useState("");
+  const [isLoadingPost, setIsLoadingPost] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const trimmedTitle = title.trim();
   const trimmedContent = content.trim();
   const canSubmit = trimmedContent.length > 0 && title.length <= MAX_TITLE_LENGTH;
+  const loadPost = useCallback(async () => {
+    if (!postId) {
+      setError("帖子不存在");
+      setIsLoadingPost(false);
+      return;
+    }
+
+    setIsLoadingPost(true);
+    setError("");
+
+    try {
+      const result = await getPost(postId);
+      setTitle(result.title ?? "");
+      setContent(result.content);
+      setVisibility(result.visibility === 2 ? 2 : 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "帖子加载失败");
+    } finally {
+      setIsLoadingPost(false);
+    }
+  }, [postId]);
+
+  useEffect(() => {
+    if (!isUserLoading) {
+      void loadPost();
+    }
+  }, [isUserLoading, loadPost]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+
+    if (!postId) {
+      setError("帖子不存在");
+      return;
+    }
 
     if (!trimmedContent) {
       setError("内容不能为空");
@@ -47,20 +87,20 @@ export default function NewPostPage() {
     setIsSubmitting(true);
 
     try {
-      const postId = await createPost({
+      await updatePost(postId, {
         title: trimmedTitle || undefined,
         content: trimmedContent,
         visibility,
       });
       router.replace(`/posts/${postId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "发布失败，请稍后重试");
+      setError(err instanceof Error ? err.message : "更新失败，请稍后重试");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) {
+  if (isUserLoading || isLoadingPost) {
     return <PageLoading />;
   }
 
@@ -70,33 +110,25 @@ export default function NewPostPage() {
 
       <div className="mx-auto grid max-w-7xl gap-7 px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="min-w-0">
-          <div className="mb-7 overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
-            <div className="relative min-h-64">
-              <div className="absolute inset-0 bg-[linear-gradient(135deg,#f4d35e_0%,#74c69d_46%,#4cc9f0_100%)] opacity-80" />
-              <div className="absolute inset-0 bg-gradient-to-r from-background via-background/76 to-background/18" />
-              <div className="relative max-w-2xl p-6 sm:p-8">
-                <p className="text-sm tracking-[0.24em] text-accent">NEW POST</p>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  写下新的分支
-                </h1>
-                <p className="mt-4 text-sm leading-7 text-muted">
-                  标题给路径一个入口，正文负责把想法落到页面上。
-                </p>
-              </div>
-            </div>
-          </div>
-
           <form
             className="rounded-md border border-line bg-panel p-5 shadow-subtle sm:p-7"
             onSubmit={handleSubmit}
           >
-            <div className="grid gap-5">
+            <p className="text-sm tracking-[0.24em] text-accent">EDIT POST</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              编辑帖子
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-muted">
+              当前所有登录用户都可以进入编辑和删除流程。
+            </p>
+
+            <div className="mt-7 grid gap-5">
               <Input
                 label="标题"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 maxLength={MAX_TITLE_LENGTH}
-                placeholder="first post"
+                placeholder="updated title"
               />
 
               <div>
@@ -135,7 +167,7 @@ export default function NewPostPage() {
                   value={content}
                   onChange={(event) => setContent(event.target.value)}
                   maxLength={MAX_CONTENT_LENGTH}
-                  placeholder="hello qilu, this is my first post"
+                  placeholder="updated content"
                   required
                 />
               </label>
@@ -148,49 +180,32 @@ export default function NewPostPage() {
               </div>
               <div className="flex gap-3">
                 <Link
-                  href="/"
+                  href={`/posts/${postId}`}
                   className="inline-flex h-11 items-center justify-center rounded-md border border-line px-5 text-sm text-foreground transition hover:border-accent hover:text-accent"
                 >
-                  返回主页
+                  取消
                 </Link>
                 <Button type="submit" disabled={isSubmitting || !canSubmit}>
-                  {isSubmitting ? "正在发布" : "发布帖子"}
+                  {isSubmitting ? "正在保存" : "保存修改"}
                 </Button>
               </div>
             </div>
 
-            {error ? (
+            {error || userError ? (
               <div className="mt-5">
-                <ErrorNotice message={error} />
+                <ErrorNotice message={error || userError} />
               </div>
             ) : null}
-
-            {userError ? (
-              <div className="mt-5">
-                <ErrorNotice message={userError} />
-              </div>
-            ) : null}
-
           </form>
         </section>
 
         <aside className="space-y-5">
           <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
-            <p className="text-xs tracking-[0.24em] text-muted">AUTHOR</p>
-            <h2 className="mt-2 text-lg font-semibold text-foreground">
-              {user?.nickname}
-            </h2>
-            <p className="mt-2 break-all text-sm leading-6 text-muted">
-              {user?.email}
-            </p>
-          </div>
-
-          <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
             <p className="text-xs tracking-[0.24em] text-muted">LIMITS</p>
             <div className="mt-4 grid gap-3 text-sm text-muted">
               <p>标题最多 {MAX_TITLE_LENGTH} 个字符。</p>
               <p>内容最多 {MAX_CONTENT_LENGTH} 个字符。</p>
-              <p>{visibility === 1 ? "公开发布后会进入列表。" : "当前选择为私密保存。"}</p>
+              <p>{visibility === 1 ? "公开内容会进入列表。" : "当前选择为私密保存。"}</p>
             </div>
           </div>
         </aside>

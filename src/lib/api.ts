@@ -9,11 +9,28 @@ export type User = {
 };
 
 export type Post = {
-  uuid?: string;
-  id?: string;
-  title: string;
+  id: number;
+  userUuid: string;
+  title?: string;
   content: string;
+  visibility?: 1 | 2;
   createdAt?: string;
+  createAt?: string;
+};
+
+export type PostListItem = {
+  id: number;
+  userUuid: string;
+  title?: string;
+  createdAt?: string;
+  createAt?: string;
+};
+
+export type PageResult<T> = {
+  current: number;
+  size: number;
+  total: number;
+  records: T[];
 };
 
 type LoginResponse = {
@@ -47,9 +64,48 @@ export function getCurrentUser() {
   return request<User>("/users/me");
 }
 
-export function createPost(input: { title: string; content: string }) {
-  return request<Post>("/posts", {
+export type PostInput = {
+  title?: string;
+  content: string;
+  visibility?: 1 | 2;
+};
+
+export function createPost(input: PostInput) {
+  return request<number>("/posts", {
     method: "POST",
     body: input,
+  });
+}
+
+export function getPostPage(input: { current?: number; size?: number } = {}) {
+  const params = new URLSearchParams();
+
+  if (input.current) {
+    params.set("current", String(input.current));
+  }
+
+  if (input.size) {
+    params.set("size", String(input.size));
+  }
+
+  const query = params.toString();
+
+  return request<PageResult<PostListItem>>(`/posts${query ? `?${query}` : ""}`);
+}
+
+export function getPost(postId: number | string) {
+  return request<Post>(`/posts/${postId}`);
+}
+
+export function updatePost(postId: number | string, input: PostInput) {
+  return request<null>(`/posts/${postId}`, {
+    method: "PUT",
+    body: input,
+  });
+}
+
+export function deletePost(postId: number | string) {
+  return request<null>(`/posts/${postId}`, {
+    method: "DELETE",
   });
 }
