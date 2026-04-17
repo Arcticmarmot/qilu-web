@@ -65,21 +65,21 @@ export default function NewPostPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="h-screen overflow-hidden bg-background text-foreground">
       <AppHeader />
 
-      <div className="mx-auto grid max-w-7xl gap-7 px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="min-w-0">
-          <div className="mb-7 overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
-            <div className="relative min-h-64">
+      <div className="mx-auto grid h-[calc(100vh-3.5rem)] max-w-7xl gap-5 overflow-hidden px-5 pb-4 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="min-w-0 overflow-y-auto pr-1">
+          <div className="mb-4 overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
+            <div className="relative min-h-36">
               <div className="absolute inset-0 bg-[linear-gradient(135deg,#f4d35e_0%,#74c69d_46%,#4cc9f0_100%)] opacity-80" />
               <div className="absolute inset-0 bg-gradient-to-r from-background via-background/76 to-background/18" />
-              <div className="relative max-w-2xl p-6 sm:p-8">
-                <p className="text-sm tracking-[0.24em] text-accent">NEW POST</p>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              <div className="relative max-w-2xl p-4 sm:p-5">
+                <p className="text-sm tracking-[0.24em] text-accent">创建帖子</p>
+                <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                   写下新的分支
                 </h1>
-                <p className="mt-4 text-sm leading-7 text-muted">
+                <p className="mt-2 text-sm leading-6 text-muted">
                   标题给路径一个入口，正文负责把想法落到页面上。
                 </p>
               </div>
@@ -87,10 +87,10 @@ export default function NewPostPage() {
           </div>
 
           <form
-            className="rounded-md border border-line bg-panel p-5 shadow-subtle sm:p-7"
+            className="rounded-md border border-line bg-panel p-4 shadow-subtle sm:p-5"
             onSubmit={handleSubmit}
           >
-            <div className="grid gap-5">
+            <div className="grid gap-4">
               <Input
                 label="标题"
                 value={title}
@@ -111,7 +111,7 @@ export default function NewPostPage() {
                     <button
                       key={item.value}
                       type="button"
-                      className={`rounded-md border p-4 text-left transition ${
+                      className={`rounded-md border p-3 text-left transition ${
                         visibility === item.value
                           ? "border-accent bg-soft text-foreground"
                           : "border-line bg-transparent text-muted hover:border-accent"
@@ -131,7 +131,7 @@ export default function NewPostPage() {
                 </span>
                 <textarea
                   id="post-content"
-                  className="min-h-72 w-full resize-y rounded-md border border-line bg-soft px-3 py-3 text-sm leading-7 text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
+                  className="min-h-48 w-full resize-y rounded-md border border-line bg-soft px-3 py-3 text-sm leading-7 text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
                   value={content}
                   onChange={(event) => setContent(event.target.value)}
                   maxLength={MAX_CONTENT_LENGTH}
@@ -141,7 +141,7 @@ export default function NewPostPage() {
               </label>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
               <div className="text-xs text-muted">
                 标题 {title.length}/{MAX_TITLE_LENGTH}，正文 {content.length}/
                 {MAX_CONTENT_LENGTH}
@@ -149,7 +149,7 @@ export default function NewPostPage() {
               <div className="flex gap-3">
                 <Link
                   href="/"
-                  className="inline-flex h-11 items-center justify-center rounded-md border border-line px-5 text-sm text-foreground transition hover:border-accent hover:text-accent"
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-line px-4 text-sm text-foreground transition hover:border-accent hover:text-accent"
                 >
                   返回主页
                 </Link>
@@ -174,9 +174,9 @@ export default function NewPostPage() {
           </form>
         </section>
 
-        <aside className="space-y-5">
+        <aside className="space-y-4 overflow-y-auto pr-1">
           <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
-            <p className="text-xs tracking-[0.24em] text-muted">AUTHOR</p>
+            <p className="text-xs tracking-[0.24em] text-muted">作者信息</p>
             <h2 className="mt-2 text-lg font-semibold text-foreground">
               {user?.nickname}
             </h2>
@@ -186,8 +186,8 @@ export default function NewPostPage() {
           </div>
 
           <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
-            <p className="text-xs tracking-[0.24em] text-muted">LIMITS</p>
-            <div className="mt-4 grid gap-3 text-sm text-muted">
+            <p className="text-xs tracking-[0.24em] text-muted">发布限制</p>
+            <div className="mt-3 grid gap-2 text-sm text-muted">
               <p>标题最多 {MAX_TITLE_LENGTH} 个字符。</p>
               <p>内容最多 {MAX_CONTENT_LENGTH} 个字符。</p>
               <p>{visibility === 1 ? "公开发布后会进入列表。" : "当前选择为私密保存。"}</p>

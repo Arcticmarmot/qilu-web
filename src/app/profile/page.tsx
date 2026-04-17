@@ -14,13 +14,13 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="h-screen overflow-hidden bg-background text-foreground">
       <AppHeader />
 
-      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
+      <div className="mx-auto h-[calc(100vh-3.5rem)] max-w-5xl overflow-y-auto px-5 pb-4 pt-6 sm:px-8">
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm tracking-[0.24em] text-muted">PROFILE</p>
+            <p className="text-sm tracking-[0.24em] text-muted">个人档案</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight">
               个人中心
             </h1>

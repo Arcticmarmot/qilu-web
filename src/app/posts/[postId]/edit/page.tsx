@@ -105,16 +105,16 @@ export default function EditPostPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="h-screen overflow-hidden bg-background text-foreground">
       <AppHeader />
 
-      <div className="mx-auto grid max-w-7xl gap-7 px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="min-w-0">
+      <div className="mx-auto grid h-[calc(100vh-3.5rem)] max-w-7xl gap-5 overflow-hidden px-5 pb-4 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="min-w-0 overflow-y-auto pr-1">
           <form
-            className="rounded-md border border-line bg-panel p-5 shadow-subtle sm:p-7"
+            className="rounded-md border border-line bg-panel p-4 shadow-subtle sm:p-5"
             onSubmit={handleSubmit}
           >
-            <p className="text-sm tracking-[0.24em] text-accent">EDIT POST</p>
+            <p className="text-sm tracking-[0.24em] text-accent">编辑内容</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               编辑帖子
             </h1>
@@ -122,7 +122,7 @@ export default function EditPostPage() {
               当前所有登录用户都可以进入编辑和删除流程。
             </p>
 
-            <div className="mt-7 grid gap-5">
+            <div className="mt-5 grid gap-4">
               <Input
                 label="标题"
                 value={title}
@@ -143,7 +143,7 @@ export default function EditPostPage() {
                     <button
                       key={item.value}
                       type="button"
-                      className={`rounded-md border p-4 text-left transition ${
+                      className={`rounded-md border p-3 text-left transition ${
                         visibility === item.value
                           ? "border-accent bg-soft text-foreground"
                           : "border-line bg-transparent text-muted hover:border-accent"
@@ -163,7 +163,7 @@ export default function EditPostPage() {
                 </span>
                 <textarea
                   id="post-content"
-                  className="min-h-72 w-full resize-y rounded-md border border-line bg-soft px-3 py-3 text-sm leading-7 text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
+                  className="min-h-48 w-full resize-y rounded-md border border-line bg-soft px-3 py-3 text-sm leading-7 text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
                   value={content}
                   onChange={(event) => setContent(event.target.value)}
                   maxLength={MAX_CONTENT_LENGTH}
@@ -173,7 +173,7 @@ export default function EditPostPage() {
               </label>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
               <div className="text-xs text-muted">
                 标题 {title.length}/{MAX_TITLE_LENGTH}，正文 {content.length}/
                 {MAX_CONTENT_LENGTH}
@@ -181,7 +181,7 @@ export default function EditPostPage() {
               <div className="flex gap-3">
                 <Link
                   href={`/posts/${postId}`}
-                  className="inline-flex h-11 items-center justify-center rounded-md border border-line px-5 text-sm text-foreground transition hover:border-accent hover:text-accent"
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-line px-4 text-sm text-foreground transition hover:border-accent hover:text-accent"
                 >
                   取消
                 </Link>
@@ -199,9 +199,9 @@ export default function EditPostPage() {
           </form>
         </section>
 
-        <aside className="space-y-5">
+        <aside className="space-y-4 overflow-y-auto pr-1">
           <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
-            <p className="text-xs tracking-[0.24em] text-muted">LIMITS</p>
+            <p className="text-xs tracking-[0.24em] text-muted">编辑限制</p>
             <div className="mt-4 grid gap-3 text-sm text-muted">
               <p>标题最多 {MAX_TITLE_LENGTH} 个字符。</p>
               <p>内容最多 {MAX_CONTENT_LENGTH} 个字符。</p>

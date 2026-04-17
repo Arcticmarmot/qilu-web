@@ -21,9 +21,10 @@ export type Post = {
 export type PostListItem = {
   id: number;
   userUuid: string;
+  nickname: string;
   title?: string;
-  createdAt?: string;
-  createAt?: string;
+  contentPreview?: string;
+  createdAt: string;
 };
 
 export type PageResult<T> = {

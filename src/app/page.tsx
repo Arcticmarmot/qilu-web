@@ -42,16 +42,12 @@ function formatDate(value: string) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
+  const pad = (number: number) => String(number).padStart(2, "0");
 
-function getPostTime(post: PostListItem) {
-  return post.createAt ?? post.createdAt ?? "";
+  return [
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+  ].join(" ");
 }
 
 function getDailyFortune() {
@@ -105,17 +101,23 @@ function PostCard({ post, index }: { post: PostListItem; index: number }) {
     "from-[#f0eee7] via-[#f4d35e] to-[#74c69d]",
     "from-[#74c69d] via-[#4cc9f0] to-[#f4d35e]",
   ];
-  const size = index % 3 === 0 ? "min-h-52" : "min-h-48";
+  const blockHeights = ["min-h-[12rem]", "min-h-[14rem]", "min-h-[16rem]", "min-h-[13rem]"];
+  const previewLines = ["line-clamp-2", "line-clamp-3", "line-clamp-4"];
+  const size = blockHeights[index % blockHeights.length];
+  const preview = post.contentPreview?.trim() || "暂无内容预览";
+  const previewLine = previewLines[(post.id + index) % previewLines.length];
+  const bannerHeights = ["h-16", "h-20", "h-24"];
+  const bannerHeight = bannerHeights[(post.id + index) % bannerHeights.length];
 
   return (
     <Link
       href={`/posts/${post.id}`}
       className={cx(
-        "group block break-inside-avoid overflow-hidden rounded-md border border-line bg-panel shadow-subtle transition hover:-translate-y-1 hover:border-accent",
+        "group flex break-inside-avoid flex-col overflow-hidden rounded-md border border-line bg-panel shadow-subtle transition hover:-translate-y-1 hover:border-accent",
         size,
       )}
     >
-      <div className={cx("h-20 bg-gradient-to-br", palette[index % palette.length])}>
+      <div className={cx("bg-gradient-to-br", bannerHeight, palette[index % palette.length])}>
         <div className="flex h-full items-end justify-between bg-background/10 p-3">
           <span className="rounded-md bg-background/72 px-3 py-1 text-xs font-medium text-foreground backdrop-blur">
             #{post.id}
@@ -125,21 +127,24 @@ function PostCard({ post, index }: { post: PostListItem; index: number }) {
           </span>
         </div>
       </div>
-      <article className="p-4">
-        <h2 className="line-clamp-2 break-words text-base font-semibold leading-6 text-foreground group-hover:text-accent-strong">
+      <article className="flex flex-1 flex-col p-4">
+        <h2 className="line-clamp-3 break-words text-base font-semibold leading-6 text-foreground group-hover:text-accent-strong">
           {post.title?.trim() || "未命名帖子"}
         </h2>
-        <div className="mt-4 grid gap-2 border-t border-line pt-3 text-xs text-muted">
+        <p className={cx("mt-2 break-words text-sm leading-6 text-muted", previewLine)}>
+          {preview}
+        </p>
+        <div className="mt-auto grid gap-2 border-t border-line pt-3 text-xs text-muted">
           <div className="flex items-center justify-between gap-3">
             <span>发布人</span>
             <span className="min-w-0 max-w-44 truncate text-right text-foreground">
-              {post.userUuid}
+              {post.nickname}
             </span>
           </div>
           <div className="flex items-center justify-between gap-3">
             <span>创建时间</span>
             <span className="text-foreground">
-              {getPostTime(post) ? formatDate(getPostTime(post)) : "暂无"}
+              {formatDate(post.createdAt)}
             </span>
           </div>
         </div>
@@ -256,14 +261,14 @@ function HomeContent() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="h-screen overflow-hidden bg-background text-foreground">
       <AppHeader />
 
-      <div className="mx-auto grid max-w-7xl gap-5 px-5 py-5 sm:px-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="min-w-0">
-          <div className="mb-5 flex flex-col gap-4 rounded-md border border-line bg-panel p-4 shadow-subtle sm:flex-row sm:items-center sm:justify-between sm:p-5">
+      <div className="mx-auto grid h-[calc(100vh-3.5rem)] max-w-7xl gap-5 overflow-hidden px-5 pb-4 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <section className="flex h-full min-w-0 flex-col">
+          <div className="mb-4 flex flex-col gap-4 rounded-md border border-line bg-panel p-4 shadow-subtle sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div>
-              <p className="text-xs tracking-[0.24em] text-accent">POST FEED</p>
+              <p className="text-xs tracking-[0.24em] text-accent">内容流</p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                 最新发布
               </h1>
@@ -279,76 +284,58 @@ function HomeContent() {
             </Link>
           </div>
 
-          {error || userError ? (
-            <div className="mb-5">
-              <ErrorNotice message={error || userError} />
-            </div>
-          ) : null}
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            {error || userError ? (
+              <div className="mb-4">
+                <ErrorNotice message={error || userError} />
+              </div>
+            ) : null}
 
-          {isLoadingPosts ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="h-48 animate-pulse rounded-md border border-line bg-panel"
-                />
-              ))}
-            </div>
-          ) : page?.records.length ? (
-            <>
-              <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 [&>*]:mb-4">
-                {page.records.map((post, index) => (
-                  <PostCard key={post.id} post={post} index={index} />
+            {isLoadingPosts ? (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-48 animate-pulse rounded-md border border-line bg-panel"
+                  />
                 ))}
               </div>
-              <Pagination
-                current={page.current || current}
-                total={page.total}
-                onChange={handlePageChange}
+            ) : page?.records.length ? (
+              <>
+                <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 [&>*]:mb-4">
+                  {page.records.map((post, index) => (
+                    <PostCard key={post.id} post={post} index={index} />
+                  ))}
+                </div>
+                <Pagination
+                  current={page.current || current}
+                  total={page.total}
+                  onChange={handlePageChange}
+                />
+              </>
+            ) : (
+              <EmptyState
+                title="还没有帖子"
+                description="发布第一篇帖子后，这里会出现公开内容流。"
               />
-            </>
-          ) : (
-            <EmptyState
-              title="还没有帖子"
-              description="发布第一篇帖子后，这里会出现公开内容流。"
-            />
-          )}
+            )}
+          </div>
         </section>
 
-        <aside className="space-y-4">
-          <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
-            <div className="h-20 bg-[linear-gradient(135deg,#f4d35e_0%,#74c69d_48%,#4cc9f0_100%)]" />
-            <div className="p-4">
-              <p className="text-xs tracking-[0.24em] text-muted">SIGNED IN</p>
-              <h2 className="mt-2 text-lg font-semibold text-foreground">
-                {user?.nickname}
-              </h2>
-              <p className="mt-2 break-all text-sm leading-6 text-muted">
-                {user?.email}
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-md border border-line bg-panel p-4 shadow-subtle">
-            <p className="text-xs tracking-[0.24em] text-muted">PAGING</p>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              每页 {PAGE_SIZE} 条，按创建时间从新到旧排列。
-            </p>
-          </div>
-
-          <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
+        <aside className="grid h-full min-h-0 grid-rows-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)] gap-4 pr-1">
+          <div className="min-h-0 overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
             <Image
               src="/fortune-card.svg"
               alt=""
               width={640}
               height={360}
-              className="h-28 w-full object-cover"
+              className="h-24 w-full object-cover"
               priority
             />
-            <div className="p-4">
+            <div className="flex h-[calc(100%-6rem)] flex-col p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs tracking-[0.24em] text-muted">TODAY</p>
+                  <p className="text-xs tracking-[0.24em] text-muted">今日签</p>
                   <h2 className="mt-1 text-lg font-semibold text-foreground">
                     今日宜
                   </h2>
@@ -360,15 +347,65 @@ function HomeContent() {
                   </p>
                 </div>
               </div>
-              <div className="mt-4 grid gap-2">
+              <div className="mt-4 grid flex-1 content-start gap-2 overflow-y-auto pr-1">
                 {fortune.items.map((item) => (
                   <div
                     key={item}
-                    className="rounded-md border border-line bg-soft px-3 py-2 text-sm text-foreground"
+                    className="rounded-md border border-line bg-soft px-3 py-2.5 text-sm text-foreground"
                   >
                     {item}
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="min-h-0 overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
+            <div className="flex h-full flex-col p-4">
+              <div className="mb-4 flex items-center gap-3 border-b border-line pb-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-soft text-base font-semibold text-accent-strong">
+                  {user?.nickname?.slice(0, 1).toUpperCase() || "歧"}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs tracking-[0.24em] text-muted">当前账号</p>
+                  <h2 className="mt-1 truncate text-lg font-semibold text-foreground">
+                    {user?.nickname || "未登录"}
+                  </h2>
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <p className="break-all text-sm leading-6 text-muted">
+                  {user?.email || "暂无邮箱信息"}
+                </p>
+                <Link
+                  href="/profile"
+                  className="mt-4 inline-flex h-9 items-center justify-center rounded-md border border-line px-3 text-sm text-foreground transition hover:border-accent hover:text-accent"
+                >
+                  查看个人中心
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="min-h-0 overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
+            <div className="flex h-full flex-col p-4">
+              <p className="text-xs tracking-[0.24em] text-muted">分页信息</p>
+              <p className="mt-2 text-sm leading-6 text-muted">
+                每页 {PAGE_SIZE} 条，按创建时间从新到旧排列。
+              </p>
+              <div className="mt-auto grid grid-cols-2 gap-2 pt-4 text-sm">
+                <div className="rounded-md border border-line bg-soft p-3">
+                  <p className="text-xs text-muted">当前页</p>
+                  <p className="mt-1 font-semibold text-foreground">
+                    {page?.current || current}
+                  </p>
+                </div>
+                <div className="rounded-md border border-line bg-soft p-3">
+                  <p className="text-xs text-muted">总数</p>
+                  <p className="mt-1 font-semibold text-foreground">
+                    {page?.total ?? 0}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

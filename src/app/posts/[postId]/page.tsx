@@ -92,11 +92,11 @@ export default function PostDetailPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="h-screen overflow-hidden bg-background text-foreground">
       <AppHeader />
 
-      <div className="mx-auto grid max-w-6xl gap-7 px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <article className="min-w-0 rounded-md border border-line bg-panel shadow-subtle">
+      <div className="mx-auto grid h-[calc(100vh-3.5rem)] max-w-6xl gap-5 overflow-hidden px-5 pb-4 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <article className="min-w-0 overflow-y-auto rounded-md border border-line bg-panel shadow-subtle">
           <div className="relative h-52 overflow-hidden rounded-t-md bg-[linear-gradient(135deg,#f4d35e_0%,#74c69d_46%,#4cc9f0_100%)]">
             <div className="absolute inset-0 bg-gradient-to-t from-panel via-panel/45 to-transparent" />
           </div>
@@ -133,9 +133,9 @@ export default function PostDetailPage() {
           </div>
         </article>
 
-        <aside className="space-y-5">
+        <aside className="space-y-4 overflow-y-auto pr-1">
           <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
-            <p className="text-xs tracking-[0.24em] text-muted">ACTIONS</p>
+            <p className="text-xs tracking-[0.24em] text-muted">操作面板</p>
             <div className="mt-5 grid gap-3">
               <Link
                 href={`/posts/${postId}/edit`}
@@ -161,7 +161,7 @@ export default function PostDetailPage() {
           </div>
 
           <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
-            <p className="text-xs tracking-[0.24em] text-muted">CONTENT</p>
+            <p className="text-xs tracking-[0.24em] text-muted">阅读说明</p>
             <p className="mt-3 text-sm leading-7 text-muted">
               详情页展示完整正文，保留换行和段落。
             </p>
