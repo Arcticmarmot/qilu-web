@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { AppHeader, PageLoading } from "@/components/product-shell";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ErrorNotice } from "@/components/ui/error-notice";
+import { useToastMessage } from "@/components/ui/toast";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 export default function ProfilePage() {
   const { user, error, isLoading } = useCurrentUser();
+
+  useToastMessage(error, "error");
 
   if (isLoading) {
     return <PageLoading />;
@@ -29,14 +31,12 @@ export default function ProfilePage() {
             </p>
           </div>
           <Link
-            href="/"
+            href="/posts/me"
             className="inline-flex h-10 items-center justify-center rounded-md border border-line px-4 text-sm text-foreground transition hover:border-accent hover:text-accent"
           >
-            返回首页
+            我的帖子
           </Link>
         </div>
-
-        {error ? <ErrorNotice message={error} /> : null}
 
         <div className="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
           <Card className="overflow-hidden">
@@ -61,7 +61,7 @@ export default function ProfilePage() {
               <InfoItem label="状态" value={String(user?.status ?? "")} />
               <InfoItem label="昵称" value={user?.nickname} />
               <InfoItem label="邮箱" value={user?.email} />
-              <InfoItem label="创建时间" value={user?.createdAt} wide />
+              <InfoItem label="创建时间" value={user?.createAt} wide />
             </CardContent>
           </Card>
         </div>

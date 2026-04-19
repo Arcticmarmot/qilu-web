@@ -37,3 +37,9 @@ body {
   background: var(--accent);
   color: var(--background);
 }
+
+button:not(:disabled),
+[role="button"],
+a[href] {
+  cursor: pointer;
+}

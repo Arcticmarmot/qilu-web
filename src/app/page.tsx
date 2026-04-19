@@ -5,14 +5,20 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { AppHeader, PageLoading } from "@/components/product-shell";
+import { SocialActions } from "@/components/posts/post-actions";
+import {
+  formatDate,
+  getPageItems,
+  POST_PAGE_SIZE,
+  readPage,
+} from "@/components/posts/post-utils";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ErrorNotice } from "@/components/ui/error-notice";
+import { useToast, useToastMessage } from "@/components/ui/toast";
 import { getPostPage, type PageResult, type PostListItem } from "@/lib/api";
 import { cx } from "@/lib/cx";
 import { useCurrentUser } from "@/lib/use-current-user";
 
-const PAGE_SIZE = 6;
 const fortuneItems = [
   "宜跑步",
   "宜早睡",
@@ -25,31 +31,6 @@ const fortuneItems = [
   "宜散步",
 ];
 
-function readPage(value: string | null) {
-  const page = Number(value);
-
-  if (!Number.isFinite(page) || page < 1) {
-    return 1;
-  }
-
-  return Math.floor(page);
-}
-
-function formatDate(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  const pad = (number: number) => String(number).padStart(2, "0");
-
-  return [
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    `${pad(date.getHours())}:${pad(date.getMinutes())}`,
-  ].join(" ");
-}
-
 function getDailyFortune() {
   const now = new Date();
   const dateText = new Intl.DateTimeFormat("zh-CN", {
@@ -61,79 +42,66 @@ function getDailyFortune() {
     now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
   const score = (seed * 37) % 100;
   const firstIndex = seed % fortuneItems.length;
-  const secondIndex = Math.floor(seed / 3) % fortuneItems.length;
-  const thirdIndex = Math.floor(seed / 7) % fortuneItems.length;
-  const items = [firstIndex, secondIndex, thirdIndex]
-    .map((index) => fortuneItems[index])
-    .filter((item, index, all) => all.indexOf(item) === index);
 
   return {
     dateText,
     score,
-    items: items.length >= 3 ? items : [...items, "宜慢一点"].slice(0, 3),
+    item: fortuneItems[firstIndex],
   };
 }
 
-function getPageItems(current: number, totalPages: number) {
-  const items: Array<number | "..."> = [];
-
-  for (let page = 1; page <= totalPages; page += 1) {
-    const nearCurrent = Math.abs(page - current) <= 1;
-    const nearEdge = page <= 2 || page > totalPages - 2;
-
-    if (nearCurrent || nearEdge) {
-      items.push(page);
-      continue;
-    }
-
-    if (items[items.length - 1] !== "...") {
-      items.push("...");
-    }
-  }
-
-  return items;
-}
-
-function PostCard({ post, index }: { post: PostListItem; index: number }) {
+function PostCard({
+  post,
+  index,
+  onLikeChange,
+  onLikeError,
+  onLikeSuccess,
+}: {
+  post: PostListItem;
+  index: number;
+  onLikeChange: (postId: number, next: { likedByMe: boolean; likeCount: number }) => void;
+  onLikeError: (message: string) => void;
+  onLikeSuccess: (message: string) => void;
+}) {
   const palette = [
     "from-[#f4d35e] via-[#74c69d] to-[#4cc9f0]",
     "from-[#4cc9f0] via-[#74c69d] to-[#f0eee7]",
     "from-[#f0eee7] via-[#f4d35e] to-[#74c69d]",
     "from-[#74c69d] via-[#4cc9f0] to-[#f4d35e]",
   ];
-  const blockHeights = ["min-h-[12rem]", "min-h-[14rem]", "min-h-[16rem]", "min-h-[13rem]"];
+  const blockHeights = ["min-h-[11rem]", "min-h-[12.5rem]", "min-h-[14rem]", "min-h-[12rem]"];
   const previewLines = ["line-clamp-2", "line-clamp-3", "line-clamp-4"];
   const size = blockHeights[index % blockHeights.length];
   const preview = post.contentPreview?.trim() || "暂无内容预览";
   const previewLine = previewLines[(post.id + index) % previewLines.length];
-  const bannerHeights = ["h-16", "h-20", "h-24"];
+  const bannerHeights = ["h-14", "h-16", "h-20"];
   const bannerHeight = bannerHeights[(post.id + index) % bannerHeights.length];
 
   return (
-    <Link
-      href={`/posts/${post.id}`}
+    <article
       className={cx(
         "group flex break-inside-avoid flex-col overflow-hidden rounded-md border border-line bg-panel shadow-subtle transition hover:-translate-y-1 hover:border-accent",
         size,
       )}
     >
-      <div className={cx("bg-gradient-to-br", bannerHeight, palette[index % palette.length])}>
-        <div className="flex h-full items-end justify-between bg-background/10 p-3">
-          <span className="rounded-md bg-background/72 px-3 py-1 text-xs font-medium text-foreground backdrop-blur">
-            #{post.id}
-          </span>
-          <span className="rounded-md bg-background/72 px-3 py-1 text-xs text-accent backdrop-blur">
-            公开
-          </span>
+      <Link href={`/posts/${post.id}`} className="block">
+        <div className={cx("bg-gradient-to-br", bannerHeight, palette[index % palette.length])}>
+          <div className="flex h-full items-end justify-end bg-background/10 p-3">
+            <span className="rounded-md bg-background/72 px-3 py-1 text-xs text-accent backdrop-blur">
+              公开
+            </span>
+          </div>
         </div>
-      </div>
+      </Link>
       <article className="flex flex-1 flex-col p-4">
-        <h2 className="line-clamp-3 break-words text-base font-semibold leading-6 text-foreground group-hover:text-accent-strong">
-          {post.title?.trim() || "未命名帖子"}
-        </h2>
-        <p className={cx("mt-2 break-words text-sm leading-6 text-muted", previewLine)}>
-          {preview}
-        </p>
+        <Link href={`/posts/${post.id}`} className="block">
+          <h2 className="line-clamp-3 break-words text-base font-semibold leading-6 text-foreground group-hover:text-accent-strong">
+            {post.title?.trim() || "未命名帖子"}
+          </h2>
+          <p className={cx("mt-2 break-words text-sm leading-6 text-muted", previewLine)}>
+            {preview}
+          </p>
+        </Link>
         <div className="mt-auto grid gap-2 border-t border-line pt-3 text-xs text-muted">
           <div className="flex items-center justify-between gap-3">
             <span>发布人</span>
@@ -147,9 +115,20 @@ function PostCard({ post, index }: { post: PostListItem; index: number }) {
               {formatDate(post.createdAt)}
             </span>
           </div>
+          <div>
+            <SocialActions
+              postId={post.id}
+              likedByMe={post.likedByMe}
+              likeCount={post.likeCount}
+              onLikeChange={(next) => onLikeChange(post.id, next)}
+              onError={onLikeError}
+              onSuccess={onLikeSuccess}
+              compact
+            />
+          </div>
         </div>
       </article>
-    </Link>
+    </article>
   );
 }
 
@@ -162,7 +141,7 @@ function Pagination({
   total: number;
   onChange: (page: number) => void;
 }) {
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / POST_PAGE_SIZE));
   const pageItems = getPageItems(current, totalPages);
 
   return (
@@ -220,17 +199,21 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, error: userError, isLoading: isUserLoading } = useCurrentUser();
+  const notify = useToast();
   const current = readPage(searchParams.get("current"));
   const [page, setPage] = useState<PageResult<PostListItem> | null>(null);
   const [error, setError] = useState("");
+  const [likeError, setLikeError] = useState("");
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+
+  useToastMessage(error || userError || likeError, "error");
 
   const loadPosts = useCallback(async () => {
     setIsLoadingPosts(true);
     setError("");
 
     try {
-      const result = await getPostPage({ current, size: PAGE_SIZE });
+      const result = await getPostPage({ current, size: POST_PAGE_SIZE });
       setPage(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "帖子加载失败");
@@ -246,14 +229,32 @@ function HomeContent() {
   }, [isUserLoading, loadPosts]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil((page?.total ?? 0) / PAGE_SIZE)),
+    () => Math.max(1, Math.ceil((page?.total ?? 0) / POST_PAGE_SIZE)),
     [page?.total],
   );
   const fortune = useMemo(() => getDailyFortune(), []);
 
   const handlePageChange = (nextPage: number) => {
     const boundedPage = Math.min(Math.max(1, nextPage), totalPages);
-    router.push(`/?current=${boundedPage}&size=${PAGE_SIZE}`);
+    router.push(`/posts?current=${boundedPage}&size=${POST_PAGE_SIZE}`);
+  };
+
+  const handleLikeChange = (
+    postId: number,
+    next: { likedByMe: boolean; likeCount: number },
+  ) => {
+    setPage((currentPage) => {
+      if (!currentPage) {
+        return currentPage;
+      }
+
+      return {
+        ...currentPage,
+        records: currentPage.records.map((post) =>
+          post.id === postId ? { ...post, ...next } : post,
+        ),
+      };
+    });
   };
 
   if (isUserLoading) {
@@ -261,11 +262,11 @@ function HomeContent() {
   }
 
   return (
-    <main className="h-screen overflow-hidden bg-background text-foreground">
+    <main className="min-h-screen bg-background text-foreground">
       <AppHeader />
 
-      <div className="mx-auto grid h-[calc(100vh-3.5rem)] max-w-7xl gap-5 overflow-hidden px-5 pb-4 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="flex h-full min-w-0 flex-col">
+      <div className="mx-auto grid max-w-7xl gap-5 px-5 pb-6 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <section className="min-w-0">
           <div className="mb-4 flex flex-col gap-4 rounded-md border border-line bg-panel p-4 shadow-subtle sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div>
               <p className="text-xs tracking-[0.24em] text-accent">内容流</p>
@@ -277,20 +278,14 @@ function HomeContent() {
               </p>
             </div>
             <Link
-              href="/posts/new"
+              href="/posts/create"
               className="inline-flex h-10 items-center justify-center rounded-md bg-foreground px-4 text-sm font-medium text-background transition hover:bg-accent-strong"
             >
               发布帖子
             </Link>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-            {error || userError ? (
-              <div className="mb-4">
-                <ErrorNotice message={error || userError} />
-              </div>
-            ) : null}
-
+          <div>
             {isLoadingPosts ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, index) => (
@@ -304,7 +299,14 @@ function HomeContent() {
               <>
                 <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 [&>*]:mb-4">
                   {page.records.map((post, index) => (
-                    <PostCard key={post.id} post={post} index={index} />
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      index={index}
+                      onLikeChange={handleLikeChange}
+                      onLikeError={setLikeError}
+                      onLikeSuccess={(message) => notify(message, "success")}
+                    />
                   ))}
                 </div>
                 <Pagination
@@ -322,17 +324,17 @@ function HomeContent() {
           </div>
         </section>
 
-        <aside className="grid h-full min-h-0 grid-rows-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)] gap-4 pr-1">
-          <div className="min-h-0 overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
+        <aside className="grid content-start gap-5">
+          <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
             <Image
               src="/fortune-card.svg"
               alt=""
               width={640}
               height={360}
-              className="h-24 w-full object-cover"
+              className="h-28 w-full object-cover"
               priority
             />
-            <div className="flex h-[calc(100%-6rem)] flex-col p-4">
+            <div className="p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs tracking-[0.24em] text-muted">今日签</p>
@@ -347,21 +349,14 @@ function HomeContent() {
                   </p>
                 </div>
               </div>
-              <div className="mt-4 grid flex-1 content-start gap-2 overflow-y-auto pr-1">
-                {fortune.items.map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-md border border-line bg-soft px-3 py-2.5 text-sm text-foreground"
-                  >
-                    {item}
-                  </div>
-                ))}
+              <div className="mt-4 rounded-md border border-line bg-soft px-3 py-3 text-sm font-medium text-foreground">
+                {fortune.item}
               </div>
             </div>
           </div>
 
-          <div className="min-h-0 overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
-            <div className="flex h-full flex-col p-4">
+          <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
+            <div className="p-5">
               <div className="mb-4 flex items-center gap-3 border-b border-line pb-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-soft text-base font-semibold text-accent-strong">
                   {user?.nickname?.slice(0, 1).toUpperCase() || "歧"}
@@ -373,7 +368,7 @@ function HomeContent() {
                   </h2>
                 </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div>
                 <p className="break-all text-sm leading-6 text-muted">
                   {user?.email || "暂无邮箱信息"}
                 </p>
@@ -387,11 +382,11 @@ function HomeContent() {
             </div>
           </div>
 
-          <div className="min-h-0 overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
-            <div className="flex h-full flex-col p-4">
+          <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
+            <div className="p-5">
               <p className="text-xs tracking-[0.24em] text-muted">分页信息</p>
               <p className="mt-2 text-sm leading-6 text-muted">
-                每页 {PAGE_SIZE} 条，按创建时间从新到旧排列。
+                每页 {POST_PAGE_SIZE} 条，按创建时间从新到旧排列。
               </p>
               <div className="mt-auto grid grid-cols-2 gap-2 pt-4 text-sm">
                 <div className="rounded-md border border-line bg-soft p-3">

@@ -53,7 +53,7 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
     const payload = (await response.json()) as ApiResponse<T>;
 
     // 后端响应固定为 { code, message, data }，统一在请求层拆包。
-    if (!response.ok || payload.code !== 200) {
+    if (!response.ok || (payload.code !== 0 && payload.code !== 200)) {
       throw new Error(payload.message || "请求失败");
     }
 

@@ -5,15 +5,18 @@ export type User = {
   nickname: string;
   email: string;
   status: number;
-  createdAt: string;
+  createAt?: string;
 };
 
 export type Post = {
   id: number;
   userUuid: string;
+  nickname?: string;
   title?: string;
   content: string;
   visibility?: 1 | 2;
+  likeCount?: number;
+  likedByMe?: boolean;
   createdAt?: string;
   createAt?: string;
 };
@@ -24,6 +27,9 @@ export type PostListItem = {
   nickname: string;
   title?: string;
   contentPreview?: string;
+  visibility?: 1 | 2;
+  likeCount: number;
+  likedByMe: boolean;
   createdAt: string;
 };
 
@@ -32,6 +38,19 @@ export type PageResult<T> = {
   size: number;
   total: number;
   records: T[];
+};
+
+export type NotificationType = "POST_LIKED";
+
+export type NotificationListItem = {
+  id: number;
+  actorUuid: string;
+  type: NotificationType | string;
+  entityType: string;
+  entityId: number;
+  isRead: 0 | 1;
+  createAt?: string;
+  createdAt?: string;
 };
 
 type LoginResponse = {
@@ -68,7 +87,7 @@ export function getCurrentUser() {
 export type PostInput = {
   title?: string;
   content: string;
-  visibility?: 1 | 2;
+  visibility: 1 | 2;
 };
 
 export function createPost(input: PostInput) {
@@ -94,8 +113,42 @@ export function getPostPage(input: { current?: number; size?: number } = {}) {
   return request<PageResult<PostListItem>>(`/posts${query ? `?${query}` : ""}`);
 }
 
+export function getMyPostPage(input: { current?: number; size?: number } = {}) {
+  const params = new URLSearchParams();
+
+  if (input.current) {
+    params.set("current", String(input.current));
+  }
+
+  if (input.size) {
+    params.set("size", String(input.size));
+  }
+
+  const query = params.toString();
+
+  return request<PageResult<PostListItem>>(
+    `/posts/me${query ? `?${query}` : ""}`,
+  );
+}
+
 export function getPost(postId: number | string) {
   return request<Post>(`/posts/${postId}`);
+}
+
+export function getMyPost(postId: number | string) {
+  return request<Post>(`/posts/me/${postId}`);
+}
+
+export function likePost(postId: number | string) {
+  return request<null>(`/likes/posts/${postId}`, {
+    method: "POST",
+  });
+}
+
+export function unlikePost(postId: number | string) {
+  return request<null>(`/likes/posts/${postId}`, {
+    method: "DELETE",
+  });
 }
 
 export function updatePost(postId: number | string, input: PostInput) {
@@ -108,5 +161,19 @@ export function updatePost(postId: number | string, input: PostInput) {
 export function deletePost(postId: number | string) {
   return request<null>(`/posts/${postId}`, {
     method: "DELETE",
+  });
+}
+
+export function getNotifications(type: NotificationType = "POST_LIKED") {
+  const params = new URLSearchParams({ type });
+
+  return request<NotificationListItem[]>(`/notifications?${params.toString()}`);
+}
+
+export function markNotificationsReadAll(type: NotificationType = "POST_LIKED") {
+  const params = new URLSearchParams({ type });
+
+  return request<null>(`/notifications/read-all?${params.toString()}`, {
+    method: "PATCH",
   });
 }

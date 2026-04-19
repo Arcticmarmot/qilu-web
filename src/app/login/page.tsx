@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
-import { ErrorNotice } from "@/components/ui/error-notice";
 import { Input } from "@/components/ui/input";
+import { useToastMessage } from "@/components/ui/toast";
 import { login } from "@/lib/api";
 import { setToken } from "@/lib/auth";
 
@@ -16,6 +16,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useToastMessage(error, "error");
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -64,7 +66,6 @@ export default function LoginPage() {
           onChange={(event) => setPassword(event.target.value)}
           required
         />
-        {error ? <ErrorNotice message={error} /> : null}
         <Button className="w-full" type="submit" disabled={isSubmitting}>
           {isSubmitting ? "正在进入" : "登录"}
         </Button>

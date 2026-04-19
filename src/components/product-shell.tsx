@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { QiluMark } from "@/components/ui/qilu-mark";
 import { clearToken } from "@/lib/auth";
 
@@ -28,21 +28,32 @@ export function AppHeader() {
         </Link>
 
         <nav className="flex items-center gap-2">
+          <NotificationBell />
           <Link
-            href="/posts/new"
+            href="/posts/create"
             className="inline-flex h-9 items-center justify-center rounded-md bg-foreground px-3 text-sm font-medium text-background transition hover:bg-accent-strong"
           >
             发帖
           </Link>
           <Link
-            href="/profile"
+            href="/posts/me"
             className="inline-flex h-9 items-center justify-center rounded-md border border-line px-3 text-sm text-foreground transition hover:border-accent hover:text-accent"
+          >
+            我的帖子
+          </Link>
+          <Link
+            href="/profile"
+            className="hidden h-9 items-center justify-center rounded-md border border-line px-3 text-sm text-foreground transition hover:border-accent hover:text-accent sm:inline-flex"
           >
             个人中心
           </Link>
-          <Button variant="secondary" className="h-9 px-3" onClick={handleLogout}>
+          <button
+            type="button"
+            className="inline-flex h-9 min-w-16 items-center justify-center rounded-md border border-[#8f2424] px-4 text-sm font-medium text-[#d98d8d] transition hover:border-[#b73535] hover:bg-[#8f2424]/12 hover:text-[#f0b0b0]"
+            onClick={handleLogout}
+          >
             退出
-          </Button>
+          </button>
         </nav>
       </div>
     </header>

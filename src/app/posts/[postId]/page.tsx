@@ -1,47 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AppHeader, PageLoading } from "@/components/product-shell";
-import { Button } from "@/components/ui/button";
-import { ErrorNotice } from "@/components/ui/error-notice";
-import { deletePost, getPost, type Post } from "@/lib/api";
+import { SocialActions } from "@/components/posts/post-actions";
+import { formatDate, getPostTime } from "@/components/posts/post-utils";
+import { useToast, useToastMessage } from "@/components/ui/toast";
+import { getPost, type Post } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 function getParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function formatDate(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function getPostTime(post: Post) {
-  return post.createAt ?? post.createdAt ?? "";
-}
-
 export default function PostDetailPage() {
-  const router = useRouter();
   const params = useParams();
   const postId = getParam(params.postId);
   const { error: userError, isLoading: isUserLoading } = useCurrentUser();
+  const notify = useToast();
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
   const [isLoadingPost, setIsLoadingPost] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
+
+  useToastMessage(error || userError, "error");
 
   const loadPost = useCallback(async () => {
     if (!postId) {
@@ -69,24 +51,6 @@ export default function PostDetailPage() {
     }
   }, [isUserLoading, loadPost]);
 
-  const handleDelete = async () => {
-    if (!postId || !window.confirm("确认删除这篇帖子？")) {
-      return;
-    }
-
-    setIsDeleting(true);
-    setError("");
-
-    try {
-      await deletePost(postId);
-      router.replace("/");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "删除失败");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   if (isUserLoading || isLoadingPost) {
     return <PageLoading />;
   }
@@ -102,27 +66,30 @@ export default function PostDetailPage() {
           </div>
 
           <div className="p-6 sm:p-8">
-            {error || userError ? (
-              <div className="mb-5">
-                <ErrorNotice message={error || userError} />
-              </div>
-            ) : null}
-
             {post ? (
               <>
                 <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
-                  <span className="rounded-md border border-line bg-soft px-3 py-1">
-                    #{post.id}
-                  </span>
                   <span>{getPostTime(post) ? formatDate(getPostTime(post)) : "暂无"}</span>
-                  <span>{post.visibility === 2 ? "私密" : "公开"}</span>
+                  <span>公开</span>
                 </div>
                 <h1 className="mt-5 break-words text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-4xl">
                   {post.title?.trim() || "未命名帖子"}
                 </h1>
                 <p className="mt-4 break-all text-xs text-muted">
-                  作者 {post.userUuid}
+                  作者 {post.nickname || post.userUuid}
                 </p>
+                <div className="mt-6 border-t border-line pt-5">
+                  <SocialActions
+                    postId={post.id}
+                    likedByMe={Boolean(post.likedByMe)}
+                    likeCount={post.likeCount ?? 0}
+                    onLikeChange={(next) =>
+                      setPost((current) => (current ? { ...current, ...next } : current))
+                    }
+                    onError={setError}
+                    onSuccess={(message) => notify(message, "success")}
+                  />
+                </div>
                 <div className="mt-8 whitespace-pre-wrap break-words border-t border-line pt-8 text-base leading-8 text-foreground">
                   {post.content}
                 </div>
@@ -135,27 +102,19 @@ export default function PostDetailPage() {
 
         <aside className="space-y-4 overflow-y-auto pr-1">
           <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
-            <p className="text-xs tracking-[0.24em] text-muted">操作面板</p>
+            <p className="text-xs tracking-[0.24em] text-muted">公开浏览</p>
             <div className="mt-5 grid gap-3">
               <Link
-                href={`/posts/${postId}/edit`}
-                className="inline-flex h-11 items-center justify-center rounded-md bg-foreground px-5 text-sm font-medium text-background transition hover:bg-accent-strong"
-              >
-                编辑帖子
-              </Link>
-              <Button
-                variant="secondary"
-                className="w-full border-danger text-danger hover:border-danger hover:text-danger"
-                disabled={isDeleting}
-                onClick={handleDelete}
-              >
-                {isDeleting ? "正在删除" : "删除帖子"}
-              </Button>
-              <Link
-                href="/"
+                href="/posts"
                 className="inline-flex h-11 items-center justify-center rounded-md border border-line px-5 text-sm text-foreground transition hover:border-accent hover:text-accent"
               >
-                返回主页
+                返回内容流
+              </Link>
+              <Link
+                href="/posts/me"
+                className="inline-flex h-11 items-center justify-center rounded-md bg-foreground px-5 text-sm font-medium text-background transition hover:bg-accent-strong"
+              >
+                我的帖子
               </Link>
             </div>
           </div>
