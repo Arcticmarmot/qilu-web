@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="road" x1="24" y1="7.5" x2="24" y2="41" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f7f5ef"/>
+      <stop offset="1" stop-color="#dbd6ca"/>
+    </linearGradient>
+    <linearGradient id="outline" x1="24" y1="7.5" x2="24" y2="41" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2a3430"/>
+      <stop offset="1" stop-color="#1a201d"/>
+    </linearGradient>
+    <linearGradient id="lane" x1="24" y1="15" x2="24" y2="41" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffd86e"/>
+      <stop offset="1" stop-color="#e7b83d"/>
+    </linearGradient>
+  </defs>
+  <path d="M13.5 41C15.8 31.2 19.3 20.9 24 7.8C28.7 20.9 32.2 31.2 34.5 41H13.5Z" stroke="url(#outline)" stroke-width="1.2" stroke-linejoin="round" fill="url(#road)"/>
+  <path d="M19.6 41C20.9 32.2 22.5 23.5 24 15.2C25.5 23.5 27.1 32.2 28.4 41H19.6Z" fill="#171d1b"/>
+  <path d="M24 17V21" stroke="url(#lane)" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M24 24V29" stroke="url(#lane)" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M24 32.5V40" stroke="url(#lane)" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M11.5 41H36.5" stroke="#31403a" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+</svg>
