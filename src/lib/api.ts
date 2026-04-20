@@ -40,16 +40,14 @@ export type PageResult<T> = {
   records: T[];
 };
 
-export type NotificationType = "POST_LIKED";
-
 export type NotificationListItem = {
   id: number;
   actorUuid: string;
-  type: NotificationType | string;
+  actorNickname?: string;
   entityType: string;
   entityId: number;
+  entityTitlePreview?: string;
   isRead: 0 | 1;
-  createAt?: string;
   createdAt?: string;
 };
 
@@ -164,16 +162,16 @@ export function deletePost(postId: number | string) {
   });
 }
 
-export function getNotifications(type: NotificationType = "POST_LIKED") {
-  const params = new URLSearchParams({ type });
-
-  return request<NotificationListItem[]>(`/notifications?${params.toString()}`);
+export function getLikeNotifications() {
+  return request<NotificationListItem[]>("/like-notifications");
 }
 
-export function markNotificationsReadAll(type: NotificationType = "POST_LIKED") {
-  const params = new URLSearchParams({ type });
+export function getUnreadLikeNotificationCount() {
+  return request<number>("/like-notifications/unread-count");
+}
 
-  return request<null>(`/notifications/read-all?${params.toString()}`, {
+export function markLikeNotificationsReadAll() {
+  return request<null>("/like-notifications/read-all", {
     method: "PATCH",
   });
 }

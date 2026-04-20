@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { AppHeader, PageLoading } from "@/components/product-shell";
 import { SocialActions } from "@/components/posts/post-actions";
 import {
@@ -325,6 +326,8 @@ function HomeContent() {
         </section>
 
         <aside className="grid content-start gap-5">
+          <NotificationBell card />
+
           <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
             <Image
               src="/fortune-card.svg"
@@ -378,29 +381,6 @@ function HomeContent() {
                 >
                   查看个人中心
                 </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
-            <div className="p-5">
-              <p className="text-xs tracking-[0.24em] text-muted">分页信息</p>
-              <p className="mt-2 text-sm leading-6 text-muted">
-                每页 {POST_PAGE_SIZE} 条，按创建时间从新到旧排列。
-              </p>
-              <div className="mt-auto grid grid-cols-2 gap-2 pt-4 text-sm">
-                <div className="rounded-md border border-line bg-soft p-3">
-                  <p className="text-xs text-muted">当前页</p>
-                  <p className="mt-1 font-semibold text-foreground">
-                    {page?.current || current}
-                  </p>
-                </div>
-                <div className="rounded-md border border-line bg-soft p-3">
-                  <p className="text-xs text-muted">总数</p>
-                  <p className="mt-1 font-semibold text-foreground">
-                    {page?.total ?? 0}
-                  </p>
-                </div>
               </div>
             </div>
           </div>

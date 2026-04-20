@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { NotificationBell } from "@/components/notifications/notification-bell";
 import { QiluMark } from "@/components/ui/qilu-mark";
 import { clearToken } from "@/lib/auth";
 
@@ -28,7 +27,6 @@ export function AppHeader() {
         </Link>
 
         <nav className="flex items-center gap-2">
-          <NotificationBell />
           <Link
             href="/posts/create"
             className="inline-flex h-9 items-center justify-center rounded-md bg-foreground px-3 text-sm font-medium text-background transition hover:bg-accent-strong"
