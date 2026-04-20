@@ -97,6 +97,8 @@ function MyPostCard({
               onLikeChange={(next) => onLikeChange(post.id, next)}
               onError={onLikeError}
               onSuccess={onLikeSuccess}
+              commentHref={`/posts/me/${post.id}#comments`}
+              commentCount={post.commentCount}
               compact
             />
             <div className="flex items-center gap-2">

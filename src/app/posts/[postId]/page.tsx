@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AppHeader, PageLoading } from "@/components/product-shell";
+import { CommentPanel } from "@/components/posts/comment-panel";
 import { SocialActions } from "@/components/posts/post-actions";
 import { formatDate, getPostTime } from "@/components/posts/post-utils";
 import { useToast, useToastMessage } from "@/components/ui/toast";
@@ -17,11 +18,12 @@ function getParam(value: string | string[] | undefined) {
 export default function PostDetailPage() {
   const params = useParams();
   const postId = getParam(params.postId);
-  const { error: userError, isLoading: isUserLoading } = useCurrentUser();
+  const { user, error: userError, isLoading: isUserLoading } = useCurrentUser();
   const notify = useToast();
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
   const [isLoadingPost, setIsLoadingPost] = useState(true);
+  const [commentCount, setCommentCount] = useState(0);
 
   useToastMessage(error || userError, "error");
 
@@ -88,11 +90,20 @@ export default function PostDetailPage() {
                     }
                     onError={setError}
                     onSuccess={(message) => notify(message, "success")}
+                    commentsEnabled
+                    commentCount={commentCount}
                   />
                 </div>
                 <div className="mt-8 whitespace-pre-wrap break-words border-t border-line pt-8 text-base leading-8 text-foreground">
                   {post.content}
                 </div>
+                <CommentPanel
+                  postId={post.id}
+                  currentUserUuid={user?.uuid}
+                  onError={setError}
+                  onSuccess={(message) => notify(message, "success")}
+                  onCountChange={setCommentCount}
+                />
               </>
             ) : (
               <p className="text-sm text-muted">没有找到这篇帖子。</p>

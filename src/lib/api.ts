@@ -30,7 +30,17 @@ export type PostListItem = {
   visibility?: 1 | 2;
   likeCount: number;
   likedByMe: boolean;
+  commentCount: number;
   createdAt: string;
+};
+
+export type PostComment = {
+  id: number;
+  postId: number;
+  userUuid: string;
+  nickname?: string;
+  content: string;
+  createdAt?: string;
 };
 
 export type PageResult<T> = {
@@ -158,6 +168,23 @@ export function updatePost(postId: number | string, input: PostInput) {
 
 export function deletePost(postId: number | string) {
   return request<null>(`/posts/${postId}`, {
+    method: "DELETE",
+  });
+}
+
+export function getPostComments(postId: number | string) {
+  return request<PostComment[]>(`/posts/${postId}/comments`);
+}
+
+export function createPostComment(postId: number | string, input: { content: string }) {
+  return request<null>(`/posts/${postId}/comments`, {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function deletePostComment(commentId: number | string) {
+  return request<null>(`/comments/${commentId}`, {
     method: "DELETE",
   });
 }

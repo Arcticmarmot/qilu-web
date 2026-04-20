@@ -16,7 +16,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast, useToastMessage } from "@/components/ui/toast";
-import { getPostPage, type PageResult, type PostListItem } from "@/lib/api";
+import {
+  getPostPage,
+  type PageResult,
+  type PostListItem,
+} from "@/lib/api";
 import { cx } from "@/lib/cx";
 import { useCurrentUser } from "@/lib/use-current-user";
 
@@ -124,6 +128,8 @@ function PostCard({
               onLikeChange={(next) => onLikeChange(post.id, next)}
               onError={onLikeError}
               onSuccess={onLikeSuccess}
+              commentHref={`/posts/${post.id}#comments`}
+              commentCount={post.commentCount}
               compact
             />
           </div>

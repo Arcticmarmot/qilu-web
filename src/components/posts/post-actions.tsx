@@ -12,6 +12,9 @@ type SocialActionsProps = {
   onLikeChange: (next: { likedByMe: boolean; likeCount: number }) => void;
   onError?: (message: string) => void;
   onSuccess?: (message: string) => void;
+  commentsEnabled?: boolean;
+  commentHref?: string;
+  commentCount?: number;
   compact?: boolean;
 };
 
@@ -22,8 +25,18 @@ export function SocialActions({
   onLikeChange,
   onError,
   onSuccess,
+  commentsEnabled = false,
+  commentHref,
+  commentCount,
   compact = false,
 }: SocialActionsProps) {
+  const handleCommentsClick = () => {
+    document.getElementById("comments")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   return (
     <div className={cx("flex flex-wrap items-center gap-2", compact ? "" : "rounded-md border border-line bg-soft p-2")}>
       <LikeButton
@@ -39,15 +52,51 @@ export function SocialActions({
           <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.9-5.4 2.9 1-6-4.4-4.3 6.1-.9L12 3Z" />
         </svg>
       </DisabledAction>
-      <DisabledAction label="评论" compact={compact}>
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M5 5.8A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 7 2.8 7.7 7.7 0 0 1 1.9 5.2c0 4.4-3.9 8-8.9 8a10 10 0 0 1-2.8-.4L4 21l1.4-4.2A7.6 7.6 0 0 1 3.1 11 7.7 7.7 0 0 1 5 5.8Z" />
-          <path d="M8.2 11.3h.1" />
-          <path d="M12 11.3h.1" />
-          <path d="M15.8 11.3h.1" />
-        </svg>
-      </DisabledAction>
+      {commentHref ? (
+        <Link
+          href={commentHref}
+          className="inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-md border border-line bg-transparent px-2 text-sm font-medium text-muted transition hover:border-accent hover:text-accent"
+          title="查看评论"
+          aria-label="评论"
+        >
+          <CommentIcon />
+          {typeof commentCount === "number" ? (
+            <span className="tabular-nums">{commentCount}</span>
+          ) : null}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          className={cx(
+            "inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-md border px-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-65",
+            commentsEnabled
+              ? "border-line bg-transparent text-muted hover:border-accent hover:text-accent"
+              : "border-line text-muted opacity-65",
+            compact || commentsEnabled ? "bg-transparent" : "bg-panel",
+          )}
+          disabled={!commentsEnabled}
+          title={commentsEnabled ? "查看评论" : "进入详情后评论"}
+          aria-label="评论"
+          onClick={handleCommentsClick}
+        >
+          <CommentIcon />
+          {typeof commentCount === "number" ? (
+            <span className="tabular-nums">{commentCount}</span>
+          ) : null}
+        </button>
+      )}
     </div>
+  );
+}
+
+function CommentIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 5.8A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 7 2.8 7.7 7.7 0 0 1 1.9 5.2c0 4.4-3.9 8-8.9 8a10 10 0 0 1-2.8-.4L4 21l1.4-4.2A7.6 7.6 0 0 1 3.1 11 7.7 7.7 0 0 1 5 5.8Z" />
+      <path d="M8.2 11.3h.1" />
+      <path d="M12 11.3h.1" />
+      <path d="M15.8 11.3h.1" />
+    </svg>
   );
 }
 
