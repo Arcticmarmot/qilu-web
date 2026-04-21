@@ -91,11 +91,11 @@ export function SocialActions({
 
 function CommentIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 5.8A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 7 2.8 7.7 7.7 0 0 1 1.9 5.2c0 4.4-3.9 8-8.9 8a10 10 0 0 1-2.8-.4L4 21l1.4-4.2A7.6 7.6 0 0 1 3.1 11 7.7 7.7 0 0 1 5 5.8Z" />
-      <path d="M8.2 11.3h.1" />
-      <path d="M12 11.3h.1" />
-      <path d="M15.8 11.3h.1" />
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 5.2c4.52 0 8.2 2.94 8.2 6.57S16.52 18.34 12 18.34c-1.04 0-2.05-.16-2.98-.47l-4.02 1.53 1.21-3.15c-1.49-1.14-2.41-2.72-2.41-4.48 0-3.63 3.68-6.57 8.2-6.57Z" />
+      <path d="M9 11.77h.01" />
+      <path d="M12 11.77h.01" />
+      <path d="M15 11.77h.01" />
     </svg>
   );
 }

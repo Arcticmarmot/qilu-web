@@ -62,7 +62,7 @@ export default function PostDetailPage() {
       <AppHeader />
 
       <div className="mx-auto grid h-[calc(100vh-3.5rem)] max-w-6xl gap-5 overflow-hidden px-5 pb-4 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <article className="min-w-0 overflow-y-auto rounded-md border border-line bg-panel shadow-subtle">
+        <article className="scrollbar-hidden min-w-0 overflow-y-auto rounded-md border border-line bg-panel shadow-subtle">
           <div className="relative h-52 overflow-hidden rounded-t-md bg-[linear-gradient(135deg,#f4d35e_0%,#74c69d_46%,#4cc9f0_100%)]">
             <div className="absolute inset-0 bg-gradient-to-t from-panel via-panel/45 to-transparent" />
           </div>
@@ -122,7 +122,7 @@ export default function PostDetailPage() {
                 返回内容流
               </Link>
               <Link
-                href="/posts/me"
+                href="/profile?tab=posts"
                 className="inline-flex h-11 items-center justify-center rounded-md bg-foreground px-5 text-sm font-medium text-background transition hover:bg-accent-strong"
               >
                 我的帖子

@@ -70,7 +70,7 @@ export default function MyPostDetailPage() {
     try {
       await deletePost(postId);
       notify("删除成功", "success");
-      router.replace("/posts/me");
+      router.replace("/profile?tab=posts");
     } catch (err) {
       setError(err instanceof Error ? err.message : "删除失败");
     } finally {
@@ -148,7 +148,7 @@ export default function MyPostDetailPage() {
               />
             ) : null}
             <Link
-              href="/posts/me"
+              href="/profile?tab=posts"
               className="inline-flex h-9 items-center justify-center rounded-md border border-line px-3 text-sm text-foreground transition hover:border-accent hover:text-accent"
             >
               返回我的帖子

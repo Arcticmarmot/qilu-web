@@ -52,10 +52,13 @@ export type PageResult<T> = {
 
 export type NotificationListItem = {
   id: number;
+  commentId?: number;
   actorUuid: string;
   actorNickname?: string;
   entityType: string;
   entityId: number;
+  entityPreview?: string;
+  contentPreview?: string;
   entityTitlePreview?: string;
   isRead: 0 | 1;
   createdAt?: string;
@@ -199,6 +202,20 @@ export function getUnreadLikeNotificationCount() {
 
 export function markLikeNotificationsReadAll() {
   return request<null>("/like-notifications/read-all", {
+    method: "PATCH",
+  });
+}
+
+export function getCommentNotifications() {
+  return request<NotificationListItem[]>("/comment-notifications");
+}
+
+export function getUnreadCommentNotificationCount() {
+  return request<number>("/comment-notifications/unread-count");
+}
+
+export function markCommentNotificationsReadAll() {
+  return request<null>("/comment-notifications/read-all", {
     method: "PATCH",
   });
 }

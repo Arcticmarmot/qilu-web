@@ -5,8 +5,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { formatDate } from "@/components/posts/post-utils";
 import { useToast } from "@/components/ui/toast";
 import {
+  getCommentNotifications,
   getLikeNotifications,
+  getUnreadCommentNotificationCount,
   getUnreadLikeNotificationCount,
+  markCommentNotificationsReadAll,
   markLikeNotificationsReadAll,
   type NotificationListItem,
 } from "@/lib/api";
@@ -14,108 +17,58 @@ import { cx } from "@/lib/cx";
 
 type NotificationMode = "like" | "comment";
 
+type NotificationMap = Record<NotificationMode, NotificationListItem[]>;
+type CountMap = Record<NotificationMode, number>;
+
+const INITIAL_NOTIFICATIONS: NotificationMap = {
+  like: [],
+  comment: [],
+};
+
+const INITIAL_COUNTS: CountMap = {
+  like: 0,
+  comment: 0,
+};
+
 function getNotificationTime(notification: NotificationListItem) {
   return notification.createdAt ?? "";
+}
+
+function getNotificationPreview(notification: NotificationListItem) {
+  return notification.entityPreview ?? notification.entityTitlePreview ?? "";
+}
+
+function getCommentPreview(notification: NotificationListItem) {
+  return notification.contentPreview ?? "";
 }
 
 function isUnread(notification: NotificationListItem) {
   return notification.isRead === 0;
 }
 
-function NotificationDropdown({
-  isLoading,
-  notifications,
-  hasUnread,
-  mode,
-  onClose,
-}: {
-  isLoading: boolean;
-  notifications: NotificationListItem[];
-  hasUnread: boolean;
-  mode: NotificationMode;
-  onClose: () => void;
-}) {
-  const emptyText = mode === "comment" ? "暂无评论" : "暂无点赞";
-
-  return (
-    <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
-      <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-        <p className="text-sm font-semibold text-foreground">通知中心</p>
-        {hasUnread ? (
-          <span className="rounded-md bg-danger/15 px-2 py-1 text-xs text-danger">
-            未读
-          </span>
-        ) : null}
-      </div>
-
-      <div className="max-h-[28rem] overflow-y-auto">
-        {isLoading ? (
-          <div className="px-4 py-6 text-sm text-muted">正在加载</div>
-        ) : notifications.length ? (
-          <div className="divide-y divide-line">
-            {notifications.map((notification) => (
-              <div key={notification.id} className="px-4 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="break-all text-sm leading-6 text-foreground">
-                      <span className="text-accent">
-                        {notification.actorNickname || notification.actorUuid}
-                      </span>
-                      {" 赞了你的帖子"}
-                    </p>
-                    {notification.entityTitlePreview ? (
-                      <p className="mt-1 line-clamp-2 break-words text-xs leading-5 text-muted">
-                        {notification.entityTitlePreview}
-                      </p>
-                    ) : null}
-                  </div>
-                  {isUnread(notification) ? (
-                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-danger" />
-                  ) : null}
-                </div>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-                  <Link
-                    href={`/posts/me/${notification.entityId}`}
-                    className="rounded-md border border-line px-2 py-1 text-foreground transition hover:border-accent hover:text-accent"
-                    onClick={onClose}
-                  >
-                    帖子 #{notification.entityId}
-                  </Link>
-                  <span>时间 {formatDate(getNotificationTime(notification))}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="px-4 py-8 text-sm text-muted">{emptyText}</div>
-        )}
-      </div>
-    </div>
-  );
+function getModeLabel(mode: NotificationMode) {
+  return mode === "comment" ? "评论" : "点赞";
 }
 
-function NotificationIcon({
+function NotificationTypeButton({
   mode,
   active,
-  hasUnread,
   unreadCount,
   onClick,
 }: {
   mode: NotificationMode;
   active: boolean;
-  hasUnread: boolean;
-  unreadCount?: number;
+  unreadCount: number;
   onClick: () => void;
 }) {
-  const label = mode === "comment" ? "评论" : "点赞";
-  const displayCount =
-    unreadCount && unreadCount > 99 ? "99+" : unreadCount ? String(unreadCount) : "";
+  const label = getModeLabel(mode);
+  const displayCount = unreadCount > 99 ? "99+" : unreadCount ? String(unreadCount) : "";
 
   return (
     <button
       type="button"
       className={cx(
-        "relative inline-flex h-11 min-w-24 items-center justify-center gap-2 rounded-md border border-line bg-soft px-3 text-sm text-foreground transition hover:border-accent hover:text-accent",
+        "relative inline-flex h-9 min-w-20 items-center justify-center gap-1.5 rounded-md border border-line bg-soft px-2.5 text-sm text-foreground transition hover:border-accent hover:text-accent",
         active ? "border-accent text-accent" : "",
       )}
       onClick={onClick}
@@ -123,11 +76,32 @@ function NotificationIcon({
       aria-expanded={active}
     >
       {mode === "comment" ? (
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+        <svg
+          viewBox="0 0 24 24"
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.85"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5.2c4.52 0 8.2 2.94 8.2 6.57S16.52 18.34 12 18.34c-1.04 0-2.05-.16-2.98-.47l-4.02 1.53 1.21-3.15c-1.49-1.14-2.41-2.72-2.41-4.48 0-3.63 3.68-6.57 8.2-6.57Z" />
+          <path d="M9 11.77h.01" />
+          <path d="M12 11.77h.01" />
+          <path d="M15 11.77h.01" />
         </svg>
       ) : (
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
           <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8" />
         </svg>
       )}
@@ -136,68 +110,230 @@ function NotificationIcon({
         <span className="absolute -right-1.5 -top-1.5 flex min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[11px] font-semibold leading-5 text-white ring-2 ring-panel">
           {displayCount}
         </span>
-      ) : hasUnread ? (
-        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-danger ring-2 ring-panel" />
       ) : null}
     </button>
+  );
+}
+
+function NotificationDropdown({
+  isLoading,
+  notifications,
+  hasUnread,
+  mode,
+  unreadCounts,
+  onModeChange,
+  onClose,
+}: {
+  isLoading: boolean;
+  notifications: NotificationListItem[];
+  hasUnread: boolean;
+  mode: NotificationMode;
+  unreadCounts: CountMap;
+  onModeChange: (mode: NotificationMode) => void;
+  onClose: () => void;
+}) {
+  const emptyText = mode === "comment" ? "暂无评论通知" : "暂无点赞通知";
+
+  return (
+    <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
+      <div className="border-b border-line px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-foreground">通知中心</p>
+          {hasUnread ? (
+            <span className="rounded-md bg-danger/15 px-2 py-1 text-xs text-danger">
+              未读
+            </span>
+          ) : null}
+        </div>
+        <div className="mt-2.5 flex items-center gap-2">
+          <NotificationTypeButton
+            mode="like"
+            active={mode === "like"}
+            unreadCount={unreadCounts.like}
+            onClick={() => onModeChange("like")}
+          />
+          <NotificationTypeButton
+            mode="comment"
+            active={mode === "comment"}
+            unreadCount={unreadCounts.comment}
+            onClick={() => onModeChange("comment")}
+          />
+        </div>
+      </div>
+
+      <div className="max-h-[28rem] overflow-y-auto">
+        {isLoading ? (
+          <div className="px-3 py-5 text-sm text-muted">正在加载</div>
+        ) : notifications.length ? (
+          <div className="divide-y divide-line">
+            {notifications.map((notification) => {
+              const preview = getNotificationPreview(notification);
+              const commentPreview = getCommentPreview(notification);
+              const href =
+                mode === "comment"
+                  ? `/posts/me/${notification.entityId}#comments`
+                  : `/posts/me/${notification.entityId}`;
+
+              return (
+                <div key={notification.id} className="px-3 py-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1" />
+                    {isUnread(notification) ? (
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-danger" />
+                    ) : null}
+                  </div>
+                  {mode === "comment" ? (
+                    <Link
+                      href={href}
+                      className="mt-2 grid gap-2 rounded-md border border-line bg-soft/55 p-2.5 transition hover:border-accent"
+                      onClick={onClose}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 break-all text-sm leading-5 text-foreground">
+                          <span className="text-accent">
+                            {notification.actorNickname || notification.actorUuid}
+                          </span>
+                          {" 评论了你的帖子"}
+                        </p>
+                        <span className="inline-flex max-w-32 shrink-0 items-center rounded-full bg-accent/14 px-2.5 py-1 text-[11px] font-medium text-accent">
+                          <span className="line-clamp-1 break-words">
+                            {preview || "暂无帖子预览"}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="rounded-md bg-background/72 px-3 py-2.5">
+                        <p className="line-clamp-3 break-words text-sm leading-5 text-foreground">
+                          {commentPreview || "暂无评论预览"}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-end text-[11px] text-muted">
+                        <span>{formatDate(getNotificationTime(notification))}</span>
+                      </div>
+                    </Link>
+                  ) : (
+                    <Link
+                      href={href}
+                      className="mt-2 block rounded-md border border-line bg-soft/55 p-2.5 transition hover:border-accent"
+                      onClick={onClose}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 break-all text-sm leading-5 text-foreground">
+                          <span className="text-accent">
+                            {notification.actorNickname || notification.actorUuid}
+                          </span>
+                          {" 赞了你的帖子"}
+                        </p>
+                        <span className="inline-flex max-w-32 shrink-0 items-center rounded-full bg-accent/14 px-2.5 py-1 text-[11px] font-medium text-accent">
+                          <span className="line-clamp-1 break-words">
+                            {preview || "暂无帖子预览"}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-end text-[11px] text-muted">
+                        <span>{formatDate(getNotificationTime(notification))}</span>
+                      </div>
+                    </Link>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="px-3 py-7 text-sm text-muted">{emptyText}</div>
+        )}
+      </div>
+    </div>
   );
 }
 
 export function NotificationBell({ card = false }: { card?: boolean }) {
   const notify = useToast();
   const panelRef = useRef<HTMLDivElement>(null);
-  const likeLoadIdRef = useRef(0);
+  const loadIdRef = useRef<Record<NotificationMode, number>>({
+    like: 0,
+    comment: 0,
+  });
   const [activeMode, setActiveMode] = useState<NotificationMode>("like");
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationListItem[]>([]);
-  const [hasUnread, setHasUnread] = useState(false);
-  const [unreadLikeCount, setUnreadLikeCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [notificationsByMode, setNotificationsByMode] =
+    useState<NotificationMap>(INITIAL_NOTIFICATIONS);
+  const [unreadCounts, setUnreadCounts] = useState<CountMap>(INITIAL_COUNTS);
+  const [loadingMode, setLoadingMode] = useState<NotificationMode | null>(null);
 
-  const loadUnreadLikeCount = useCallback(async () => {
+  const isLoading = loadingMode === activeMode;
+  const activeNotifications = notificationsByMode[activeMode];
+  const activeHasUnread = unreadCounts[activeMode] > 0;
+  const totalUnreadCount = unreadCounts.like + unreadCounts.comment;
+
+  const loadUnreadCounts = useCallback(async () => {
     try {
-      const count = await getUnreadLikeNotificationCount();
-      setUnreadLikeCount(count);
-      setHasUnread(count > 0);
+      const [likeCount, commentCount] = await Promise.all([
+        getUnreadLikeNotificationCount(),
+        getUnreadCommentNotificationCount(),
+      ]);
+
+      setUnreadCounts({
+        like: likeCount,
+        comment: commentCount,
+      });
     } catch (error) {
       notify(error instanceof Error ? error.message : "未读数量加载失败", "error");
     }
   }, [notify]);
 
-  const loadLikeNotifications = useCallback(
-    async ({ markRead }: { markRead: boolean }) => {
-      const loadId = likeLoadIdRef.current + 1;
-      likeLoadIdRef.current = loadId;
-      setIsLoading(true);
+  const loadNotifications = useCallback(
+    async (mode: NotificationMode, { markRead }: { markRead: boolean }) => {
+      const loadId = loadIdRef.current[mode] + 1;
+      loadIdRef.current[mode] = loadId;
+      setLoadingMode(mode);
 
       try {
-        const result = await getLikeNotifications();
-        if (likeLoadIdRef.current !== loadId) {
+        const listLoader =
+          mode === "comment" ? getCommentNotifications : getLikeNotifications;
+        const markReadLoader =
+          mode === "comment"
+            ? markCommentNotificationsReadAll
+            : markLikeNotificationsReadAll;
+
+        const result = await listLoader();
+        if (loadIdRef.current[mode] !== loadId) {
           return;
         }
 
-        setNotifications(result);
-        if (!markRead) {
-          setHasUnread(result.some(isUnread));
-        }
+        setNotificationsByMode((current) => ({
+          ...current,
+          [mode]: result,
+        }));
 
         if (markRead) {
-          await markLikeNotificationsReadAll();
-          if (likeLoadIdRef.current !== loadId) {
+          await markReadLoader();
+          if (loadIdRef.current[mode] !== loadId) {
             return;
           }
 
-          setHasUnread(false);
-          setUnreadLikeCount(0);
-          setNotifications((current) =>
-            current.map((notification) => ({ ...notification, isRead: 1 })),
-          );
+          setUnreadCounts((current) => ({
+            ...current,
+            [mode]: 0,
+          }));
+          setNotificationsByMode((current) => ({
+            ...current,
+            [mode]: current[mode].map((notification) => ({
+              ...notification,
+              isRead: 1,
+            })),
+          }));
+        } else {
+          const nextUnreadCount = result.filter(isUnread).length;
+          setUnreadCounts((current) => ({
+            ...current,
+            [mode]: nextUnreadCount,
+          }));
         }
       } catch (error) {
         notify(error instanceof Error ? error.message : "通知加载失败", "error");
       } finally {
-        if (likeLoadIdRef.current === loadId) {
-          setIsLoading(false);
+        if (loadIdRef.current[mode] === loadId) {
+          setLoadingMode((current) => (current === mode ? null : current));
         }
       }
     },
@@ -205,9 +341,12 @@ export function NotificationBell({ card = false }: { card?: boolean }) {
   );
 
   useEffect(() => {
-    void loadUnreadLikeCount();
-    void loadLikeNotifications({ markRead: false });
-  }, [loadLikeNotifications, loadUnreadLikeCount]);
+    void loadUnreadCounts();
+    void Promise.all([
+      loadNotifications("like", { markRead: false }),
+      loadNotifications("comment", { markRead: false }),
+    ]);
+  }, [loadNotifications, loadUnreadCounts]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -228,42 +367,41 @@ export function NotificationBell({ card = false }: { card?: boolean }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const handleToggle = (mode: NotificationMode = activeMode) => {
-    const nextOpen = mode !== activeMode || !isOpen;
+  const openMode = (mode: NotificationMode) => {
     setActiveMode(mode);
-    setIsOpen(nextOpen);
+    setIsOpen(true);
+    void loadNotifications(mode, { markRead: true });
+  };
 
-    if (mode === "comment") {
-      likeLoadIdRef.current += 1;
-      setNotifications([]);
-      setIsLoading(false);
+  const toggleCardMode = (mode: NotificationMode) => {
+    if (isOpen && activeMode === mode) {
+      setIsOpen(false);
       return;
     }
 
-    if (nextOpen) {
-      setHasUnread(false);
-      void loadLikeNotifications({ markRead: true });
-    }
+    openMode(mode);
   };
 
   if (card) {
     return (
-      <div className="relative min-h-36 overflow-visible rounded-md border border-line bg-panel p-5 shadow-subtle" ref={panelRef}>
+      <div
+        className="relative min-h-36 overflow-visible rounded-md border border-line bg-panel p-5 shadow-subtle"
+        ref={panelRef}
+      >
         <div>
           <h2 className="text-lg font-semibold text-foreground">通知中心</h2>
           <div className="mt-4 flex items-center gap-2">
-            <NotificationIcon
+            <NotificationTypeButton
               mode="like"
               active={isOpen && activeMode === "like"}
-              hasUnread={hasUnread}
-              unreadCount={unreadLikeCount}
-              onClick={() => handleToggle("like")}
+              unreadCount={unreadCounts.like}
+              onClick={() => toggleCardMode("like")}
             />
-            <NotificationIcon
+            <NotificationTypeButton
               mode="comment"
               active={isOpen && activeMode === "comment"}
-              hasUnread={false}
-              onClick={() => handleToggle("comment")}
+              unreadCount={unreadCounts.comment}
+              onClick={() => toggleCardMode("comment")}
             />
           </div>
         </div>
@@ -272,9 +410,11 @@ export function NotificationBell({ card = false }: { card?: boolean }) {
           <div className="absolute right-0 top-[calc(100%+0.5rem)] z-40 w-[min(22rem,calc(100vw-2rem))]">
             <NotificationDropdown
               isLoading={isLoading}
-              notifications={notifications}
-              hasUnread={activeMode === "like" && hasUnread}
+              notifications={activeNotifications}
+              hasUnread={activeHasUnread}
               mode={activeMode}
+              unreadCounts={unreadCounts}
+              onModeChange={openMode}
               onClose={() => setIsOpen(false)}
             />
           </div>
@@ -291,15 +431,31 @@ export function NotificationBell({ card = false }: { card?: boolean }) {
           "relative inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-line px-2 text-sm text-foreground transition hover:border-accent hover:text-accent",
           isOpen ? "border-accent text-accent" : "",
         )}
-        onClick={() => handleToggle()}
+        onClick={() => {
+          if (isOpen) {
+            setIsOpen(false);
+            return;
+          }
+
+          openMode(activeMode);
+        }}
         aria-label="通知"
         aria-expanded={isOpen}
       >
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
           <path d="M13.7 21a2 2 0 0 1-3.4 0" />
         </svg>
-        {hasUnread ? (
+        {totalUnreadCount > 0 ? (
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger ring-2 ring-background" />
         ) : null}
       </button>
@@ -308,9 +464,11 @@ export function NotificationBell({ card = false }: { card?: boolean }) {
         <div className="absolute right-0 top-11 z-40 w-[min(22rem,calc(100vw-2rem))]">
           <NotificationDropdown
             isLoading={isLoading}
-            notifications={notifications}
-            hasUnread={activeMode === "like" && hasUnread}
+            notifications={activeNotifications}
+            hasUnread={activeHasUnread}
             mode={activeMode}
+            unreadCounts={unreadCounts}
+            onModeChange={openMode}
             onClose={() => setIsOpen(false)}
           />
         </div>

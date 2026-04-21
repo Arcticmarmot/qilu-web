@@ -34,7 +34,7 @@ export function AppHeader() {
             发帖
           </Link>
           <Link
-            href="/posts/me"
+            href="/profile?tab=posts"
             className="inline-flex h-9 items-center justify-center rounded-md border border-line px-3 text-sm text-foreground transition hover:border-accent hover:text-accent"
           >
             我的帖子
