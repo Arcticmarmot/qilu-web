@@ -50,14 +50,42 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
       clearToken();
     }
 
-    const payload = (await response.json()) as ApiResponse<T>;
+    const text = await response.text();
 
-    // 后端响应固定为 { code, message, data }，统一在请求层拆包。
-    if (!response.ok || (payload.code !== 0 && payload.code !== 200)) {
-      throw new Error(payload.message || "请求失败");
+    if (!text.trim()) {
+      if (!response.ok) {
+        throw new Error("请求失败");
+      }
+
+      return null as T;
     }
 
-    return payload.data;
+    const payload = JSON.parse(text) as ApiResponse<T> | T;
+
+    // 兼容两种响应结构：
+    // 1) 统一包裹：{ code, message, data }
+    // 2) 直接返回业务数据：T
+    if (
+      payload &&
+      typeof payload === "object" &&
+      "code" in payload &&
+      "message" in payload &&
+      "data" in payload
+    ) {
+      const wrapped = payload as ApiResponse<T>;
+
+      if (!response.ok || (wrapped.code !== 0 && wrapped.code !== 200)) {
+        throw new Error(wrapped.message || "请求失败");
+      }
+
+      return wrapped.data;
+    }
+
+    if (!response.ok) {
+      throw new Error("请求失败");
+    }
+
+    return payload as T;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new Error("请求超时，请稍后重试");

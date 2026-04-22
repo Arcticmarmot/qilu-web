@@ -43,6 +43,18 @@ export type PostComment = {
   createdAt?: string;
 };
 
+export type CommentReply = {
+  id: number;
+  rootCommentId: number;
+  parentReplyId?: number | null;
+  userUuid: string;
+  nickname?: string;
+  targetUserUuid?: string;
+  targetNickname?: string;
+  content: string;
+  createdAt?: string;
+};
+
 export type PageResult<T> = {
   current: number;
   size: number;
@@ -189,6 +201,26 @@ export function createPostComment(postId: number | string, input: { content: str
 export function deletePostComment(commentId: number | string) {
   return request<null>(`/comments/${commentId}`, {
     method: "DELETE",
+  });
+}
+
+export function getCommentReplies(
+  postId: number | string,
+  rootCommentId: number | string,
+) {
+  return request<CommentReply[]>(
+    `/posts/${postId}/comments/${rootCommentId}/replies`,
+  );
+}
+
+export function createCommentReply(
+  postId: number | string,
+  rootCommentId: number | string,
+  input: { parentReplyId: number | string | null; content: string },
+) {
+  return request<null>(`/posts/${postId}/comments/${rootCommentId}/replies`, {
+    method: "POST",
+    body: input,
   });
 }
 
