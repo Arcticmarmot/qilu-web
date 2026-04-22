@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import {
   createCommentReply,
   createPostComment,
+  deleteCommentReply,
   deletePostComment,
   getCommentReplies,
   getPostComments,
@@ -40,6 +41,7 @@ export function CommentPanel({
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingReplyId, setDeletingReplyId] = useState<number | null>(null);
   const [replyMap, setReplyMap] = useState<Record<number, CommentReply[]>>({});
   const [isReplySubmitting, setIsReplySubmitting] = useState<number | null>(null);
   const [replyDraftMap, setReplyDraftMap] = useState<Record<number, string>>({});
@@ -158,15 +160,42 @@ export function CommentPanel({
     onError?.("");
 
     try {
-      await deletePostComment(commentId);
+      await deletePostComment(postId, commentId);
       const nextComments = comments.filter((comment) => comment.id !== commentId);
       setComments(nextComments);
+      setReplyMap((current) => {
+        const next = { ...current };
+        delete next[commentId];
+        return next;
+      });
       onCountChange?.(nextComments.length);
       onSuccess?.("评论已删除");
     } catch (error) {
       onError?.(error instanceof Error ? error.message : "评论删除失败");
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleDeleteReply = async (comment: PostComment, replyId: number) => {
+    if (deletingReplyId || !window.confirm("确认删除这条回复？")) {
+      return;
+    }
+
+    setDeletingReplyId(replyId);
+    onError?.("");
+
+    try {
+      await deleteCommentReply(postId, comment.id, replyId);
+      setReplyMap((current) => ({
+        ...current,
+        [comment.id]: (current[comment.id] || []).filter((reply) => reply.id !== replyId),
+      }));
+      onSuccess?.("回复已删除");
+    } catch (error) {
+      onError?.(error instanceof Error ? error.message : "回复删除失败");
+    } finally {
+      setDeletingReplyId(null);
     }
   };
 
@@ -405,10 +434,7 @@ export function CommentPanel({
                           </p>
                           <div className="mt-3 grid gap-2">
                             {replies.map((reply) => (
-                              <div
-                                key={reply.id}
-                                className="rounded-md border border-line bg-soft p-3"
-                              >
+                              <div key={reply.id} className="rounded-md border border-line bg-soft p-3">
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0">
                                     <p className="truncate text-xs text-foreground">
@@ -428,19 +454,31 @@ export function CommentPanel({
                                         : "刚刚"}
                                     </p>
                                   </div>
-                                  <button
-                                    type="button"
-                                    className="inline-flex h-7 shrink-0 items-center justify-center rounded-md border border-line px-2.5 text-xs text-foreground transition hover:border-accent hover:text-accent"
-                                    onClick={() =>
-                                      handleReplyTarget(
-                                        comment,
-                                        reply.id,
-                                        reply.nickname || reply.userUuid,
-                                      )
-                                    }
-                                  >
-                                    回复
-                                  </button>
+                                  <div className="flex shrink-0 items-center gap-2">
+                                    <button
+                                      type="button"
+                                      className="inline-flex h-7 items-center justify-center rounded-md border border-line px-2.5 text-xs text-foreground transition hover:border-accent hover:text-accent"
+                                      onClick={() =>
+                                        handleReplyTarget(
+                                          comment,
+                                          reply.id,
+                                          reply.nickname || reply.userUuid,
+                                        )
+                                      }
+                                    >
+                                      回复
+                                    </button>
+                                    {currentUserUuid && reply.userUuid === currentUserUuid ? (
+                                      <button
+                                        type="button"
+                                        className="inline-flex h-7 items-center justify-center rounded-md border border-[#8f2424] px-2.5 text-xs text-[#d98d8d] transition hover:border-[#b73535] hover:bg-[#8f2424]/12 hover:text-[#f0b0b0] disabled:cursor-not-allowed disabled:opacity-60"
+                                        disabled={deletingReplyId === reply.id}
+                                        onClick={() => void handleDeleteReply(comment, reply.id)}
+                                      >
+                                        {deletingReplyId === reply.id ? "删除中" : "删除"}
+                                      </button>
+                                    ) : null}
+                                  </div>
                                 </div>
                                 <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
                                   {reply.content}

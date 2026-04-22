@@ -198,8 +198,11 @@ export function createPostComment(postId: number | string, input: { content: str
   });
 }
 
-export function deletePostComment(commentId: number | string) {
-  return request<null>(`/comments/${commentId}`, {
+export function deletePostComment(
+  postId: number | string,
+  commentId: number | string,
+) {
+  return request<null>(`/posts/${postId}/comments/${commentId}`, {
     method: "DELETE",
   });
 }
@@ -222,6 +225,19 @@ export function createCommentReply(
     method: "POST",
     body: input,
   });
+}
+
+export function deleteCommentReply(
+  postId: number | string,
+  rootCommentId: number | string,
+  replyId: number | string,
+) {
+  return request<null>(
+    `/posts/${postId}/comments/${rootCommentId}/replies/${replyId}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export function getLikeNotifications() {
