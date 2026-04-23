@@ -65,6 +65,7 @@ export type PageResult<T> = {
 export type NotificationListItem = {
   id: number;
   commentId?: number;
+  replyId?: number;
   actorUuid: string;
   actorNickname?: string;
   entityType: string;
@@ -264,6 +265,20 @@ export function getUnreadCommentNotificationCount() {
 
 export function markCommentNotificationsReadAll() {
   return request<null>("/comment-notifications/read-all", {
+    method: "PATCH",
+  });
+}
+
+export function getReplyNotifications() {
+  return request<NotificationListItem[]>("/reply-notifications");
+}
+
+export function getUnreadReplyNotificationCount() {
+  return request<number>("/reply-notifications/unread-count");
+}
+
+export function markReplyNotificationsReadAll() {
+  return request<null>("/reply-notifications/read-all", {
     method: "PATCH",
   });
 }

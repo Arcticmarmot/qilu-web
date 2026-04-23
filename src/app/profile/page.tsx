@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProfileMyPostsSection } from "@/components/profile/profile-my-posts-section";
 import { AppHeader, PageLoading } from "@/components/product-shell";
@@ -60,7 +61,7 @@ function AccountSection({
   );
 }
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { user, error, isLoading } = useCurrentUser();
   const searchParams = useSearchParams();
   const activeTab = readTab(searchParams.get("tab"));
@@ -125,6 +126,14 @@ export default function ProfilePage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <ProfilePageContent />
+    </Suspense>
   );
 }
 
