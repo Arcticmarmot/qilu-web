@@ -104,11 +104,16 @@ function isUnread(notification: NotificationListItem) {
 }
 
 function getNotificationHref(notification: NotificationListItem, mode: NotificationMode) {
-  if (mode === "like") {
-    return `/posts/me/${notification.entityId}`;
+  const postId = notification.postId ?? notification.entityId;
+  if (!postId) {
+    return "/posts";
   }
 
-  return `/posts/me/${notification.entityId}#comments`;
+  if (mode === "like") {
+    return `/posts/me/${postId}`;
+  }
+
+  return `/posts/me/${postId}#comments`;
 }
 
 function NotificationModeIcon({ mode }: { mode: NotificationMode }) {

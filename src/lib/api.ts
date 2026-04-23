@@ -68,8 +68,9 @@ export type NotificationListItem = {
   replyId?: number;
   actorUuid: string;
   actorNickname?: string;
-  entityType: string;
-  entityId: number;
+  entityType?: string;
+  entityId?: number;
+  postId?: number;
   entityPreview?: string;
   contentPreview?: string;
   entityTitlePreview?: string;
