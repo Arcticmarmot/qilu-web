@@ -428,7 +428,7 @@ export function NotificationBell({ card = false }: { card?: boolean }) {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [card, isOpen]);
+  }, [isOpen]);
 
   const openMode = (mode: NotificationMode) => {
     setActiveMode(mode);
