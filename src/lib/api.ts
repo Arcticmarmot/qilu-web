@@ -115,11 +115,28 @@ export type PostInput = {
   visibility: 1 | 2;
 };
 
-export function createPost(input: PostInput) {
-  return request<number>("/posts", {
+function normalizePostId(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+export async function createPost(input: PostInput) {
+  const data = await request<number | string | null>("/posts", {
     method: "POST",
     body: input,
   });
+
+  return normalizePostId(data);
 }
 
 export function getPostPage(input: { current?: number; size?: number } = {}) {

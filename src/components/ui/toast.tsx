@@ -32,7 +32,7 @@ function ToastIcon({ type }: { type: ToastType }) {
     return (
       <svg
         viewBox="0 0 24 24"
-        className="h-4 w-4 shrink-0"
+        className="h-4 w-4 shrink-0 self-center"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
@@ -50,7 +50,7 @@ function ToastIcon({ type }: { type: ToastType }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-4 w-4 shrink-0"
+      className="h-4 w-4 shrink-0 self-center"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -113,7 +113,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={cx(
-              "pointer-events-auto flex max-w-[calc(100vw-2rem)] items-start gap-2 rounded-md border px-4 py-3 text-sm leading-6 shadow-subtle backdrop-blur",
+              "pointer-events-auto flex max-w-[calc(100vw-2rem)] items-center gap-2.5 rounded-md border px-4 py-3 text-sm shadow-subtle backdrop-blur",
               toast.type === "error"
                 ? "border-danger/35 bg-danger/15 text-danger"
                 : "border-accent/40 bg-soft/95 text-accent-strong",
@@ -121,7 +121,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role={toast.type === "error" ? "alert" : "status"}
           >
             <ToastIcon type={toast.type} />
-            <span>{toast.message}</span>
+            <span className="leading-5">{toast.message}</span>
           </div>
         ))}
       </div>

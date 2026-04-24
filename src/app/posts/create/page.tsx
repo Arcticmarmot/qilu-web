@@ -57,7 +57,7 @@ export default function NewPostPage() {
         visibility,
       });
       notify("发布成功", "success");
-      router.replace(`/posts/me/${postId}`);
+      router.replace(postId ? `/posts/me/${postId}` : "/posts/me");
     } catch (err) {
       if (!isAuthError(err)) {
         setError(getErrorMessage(err, "发布失败，请稍后重试"));
