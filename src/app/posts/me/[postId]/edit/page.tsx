@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast, useToastMessage } from "@/components/ui/toast";
 import { getMyPost, updatePost } from "@/lib/api";
+import { getErrorMessage, isAuthError } from "@/lib/error";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 const MAX_TITLE_LENGTH = 128;
@@ -51,7 +52,9 @@ export default function EditPostPage() {
       setContent(result.content);
       setVisibility(result.visibility === 2 ? 2 : 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "帖子加载失败");
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err, "帖子加载失败"));
+      }
     } finally {
       setIsLoadingPost(false);
     }
@@ -98,7 +101,9 @@ export default function EditPostPage() {
       notify("保存成功", "success");
       router.replace(`/posts/me/${postId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "更新失败，请稍后重试");
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err, "更新失败，请稍后重试"));
+      }
     } finally {
       setIsSubmitting(false);
     }

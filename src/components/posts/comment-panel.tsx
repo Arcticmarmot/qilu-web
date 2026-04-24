@@ -14,6 +14,7 @@ import {
   type PostComment,
 } from "@/lib/api";
 import { cx } from "@/lib/cx";
+import { getErrorMessage, isAuthError } from "@/lib/error";
 
 const MAX_COMMENT_LENGTH = 1024;
 
@@ -67,7 +68,9 @@ export function CommentPanel({
           [comment.id]: sortedReplies,
         }));
       } catch (error) {
-        onError?.(error instanceof Error ? error.message : "评论回复加载失败");
+        if (!isAuthError(error)) {
+          onError?.(getErrorMessage(error, "评论回复加载失败"));
+        }
       }
     },
     [onError, postId],
@@ -109,7 +112,9 @@ export function CommentPanel({
       }
       setReplyMap(nextReplyMap);
     } catch (error) {
-      onError?.(error instanceof Error ? error.message : "评论加载失败");
+      if (!isAuthError(error)) {
+        onError?.(getErrorMessage(error, "评论加载失败"));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +150,9 @@ export function CommentPanel({
       onSuccess?.("评论已发布");
       await loadComments();
     } catch (error) {
-      onError?.(error instanceof Error ? error.message : "评论发布失败");
+      if (!isAuthError(error)) {
+        onError?.(getErrorMessage(error, "评论发布失败"));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -171,7 +178,9 @@ export function CommentPanel({
       onCountChange?.(nextComments.length);
       onSuccess?.("评论已删除");
     } catch (error) {
-      onError?.(error instanceof Error ? error.message : "评论删除失败");
+      if (!isAuthError(error)) {
+        onError?.(getErrorMessage(error, "评论删除失败"));
+      }
     } finally {
       setDeletingId(null);
     }
@@ -193,7 +202,9 @@ export function CommentPanel({
       }));
       onSuccess?.("回复已删除");
     } catch (error) {
-      onError?.(error instanceof Error ? error.message : "回复删除失败");
+      if (!isAuthError(error)) {
+        onError?.(getErrorMessage(error, "回复删除失败"));
+      }
     } finally {
       setDeletingReplyId(null);
     }
@@ -242,7 +253,9 @@ export function CommentPanel({
       onSuccess?.("回复已发布");
       await loadRepliesForComment(comment);
     } catch (error) {
-      onError?.(error instanceof Error ? error.message : "回复发布失败");
+      if (!isAuthError(error)) {
+        onError?.(getErrorMessage(error, "回复发布失败"));
+      }
     } finally {
       setIsReplySubmitting(null);
     }

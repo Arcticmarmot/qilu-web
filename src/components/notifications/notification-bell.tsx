@@ -17,6 +17,7 @@ import {
   type NotificationListItem,
 } from "@/lib/api";
 import { cx } from "@/lib/cx";
+import { getErrorMessage, isAuthError } from "@/lib/error";
 
 type NotificationMode = "like" | "comment" | "reply";
 
@@ -361,7 +362,9 @@ export function NotificationBell({ card = false }: { card?: boolean }) {
 
       setUnreadCounts(Object.fromEntries(results) as CountMap);
     } catch (error) {
-      notify(error instanceof Error ? error.message : "未读数量加载失败", "error");
+      if (!isAuthError(error)) {
+        notify(getErrorMessage(error, "未读数量加载失败"), "error");
+      }
     }
   }, [notify]);
 
@@ -402,7 +405,9 @@ export function NotificationBell({ card = false }: { card?: boolean }) {
           })),
         }));
       } catch (error) {
-        notify(error instanceof Error ? error.message : "通知加载失败", "error");
+        if (!isAuthError(error)) {
+          notify(getErrorMessage(error, "通知加载失败"), "error");
+        }
       } finally {
         if (loadIdRef.current[mode] === loadId) {
           setLoadingMode((current) => (current === mode ? null : current));

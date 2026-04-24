@@ -22,6 +22,7 @@ import {
   type PostListItem,
 } from "@/lib/api";
 import { cx } from "@/lib/cx";
+import { getErrorMessage, isAuthError } from "@/lib/error";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 const fortuneItems = [
@@ -223,7 +224,9 @@ function HomeContent() {
       const result = await getPostPage({ current, size: POST_PAGE_SIZE });
       setPage(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "帖子加载失败");
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err, "帖子加载失败"));
+      }
     } finally {
       setIsLoadingPosts(false);
     }

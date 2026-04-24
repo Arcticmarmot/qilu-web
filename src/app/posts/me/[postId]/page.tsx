@@ -13,6 +13,7 @@ import {
 } from "@/components/posts/post-utils";
 import { useToast, useToastMessage } from "@/components/ui/toast";
 import { deletePost, getMyPost, type Post } from "@/lib/api";
+import { getErrorMessage, isAuthError } from "@/lib/error";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 function getParam(value: string | string[] | undefined) {
@@ -47,7 +48,9 @@ export default function MyPostDetailPage() {
       const result = await getMyPost(postId);
       setPost(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "帖子加载失败");
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err, "帖子加载失败"));
+      }
     } finally {
       setIsLoadingPost(false);
     }
@@ -72,7 +75,9 @@ export default function MyPostDetailPage() {
       notify("删除成功", "success");
       router.replace("/profile?tab=posts");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "删除失败");
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err, "删除失败"));
+      }
     } finally {
       setIsDeleting(false);
     }

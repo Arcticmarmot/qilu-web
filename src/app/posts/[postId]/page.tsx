@@ -9,6 +9,7 @@ import { SocialActions } from "@/components/posts/post-actions";
 import { formatDate, getPostTime } from "@/components/posts/post-utils";
 import { useToast, useToastMessage } from "@/components/ui/toast";
 import { getPost, type Post } from "@/lib/api";
+import { getErrorMessage, isAuthError } from "@/lib/error";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 function getParam(value: string | string[] | undefined) {
@@ -41,7 +42,9 @@ export default function PostDetailPage() {
       const result = await getPost(postId);
       setPost(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "帖子加载失败");
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err, "帖子加载失败"));
+      }
     } finally {
       setIsLoadingPost(false);
     }

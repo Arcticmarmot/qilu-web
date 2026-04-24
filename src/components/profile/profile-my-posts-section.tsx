@@ -21,6 +21,7 @@ import {
   type PostListItem,
 } from "@/lib/api";
 import { cx } from "@/lib/cx";
+import { getErrorMessage, isAuthError } from "@/lib/error";
 
 function buildProfilePostsHref(page: number) {
   return `/profile?tab=posts&current=${page}&size=${POST_PAGE_SIZE}`;
@@ -231,7 +232,9 @@ export function ProfileMyPostsSection() {
       const result = await getMyPostPage({ current, size: POST_PAGE_SIZE });
       setPage(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "帖子加载失败");
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err, "帖子加载失败"));
+      }
     } finally {
       setIsLoadingPosts(false);
     }
@@ -292,7 +295,9 @@ export function ProfileMyPostsSection() {
         };
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "删除失败");
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err, "删除失败"));
+      }
     } finally {
       setDeletingId(null);
     }

@@ -1,4 +1,11 @@
-import { clearToken, getToken } from "@/lib/auth";
+import { getToken, notifyAuthInvalid } from "@/lib/auth";
+import {
+  API_SUCCESS_CODE,
+  API_SYSTEM_ERROR_CODE,
+  API_UNAUTHORIZED_CODE,
+  ApiError,
+  logErrorInDev,
+} from "@/lib/error";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
@@ -8,7 +15,7 @@ const REQUEST_TIMEOUT_MS = 12000;
 type ApiResponse<T> = {
   code: number;
   message: string;
-  data: T;
+  data: T | null;
 };
 
 type RequestOptions = {
@@ -46,56 +53,80 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
       signal: controller.signal,
     });
 
-    if (response.status === 401) {
-      clearToken();
-    }
-
     const text = await response.text();
 
     if (!text.trim()) {
-      if (!response.ok) {
-        throw new Error("请求失败");
-      }
-
-      return null as T;
+      throw new ApiError("响应解析失败，请稍后重试", {
+        type: "parse",
+      });
     }
 
-    const payload = JSON.parse(text) as ApiResponse<T> | T;
+    let payload: unknown;
+    try {
+      payload = JSON.parse(text);
+    } catch (error) {
+      throw new ApiError("响应解析失败，请稍后重试", {
+        type: "parse",
+        cause: error,
+      });
+    }
 
-    // 兼容两种响应结构：
-    // 1) 统一包裹：{ code, message, data }
-    // 2) 直接返回业务数据：T
     if (
-      payload &&
-      typeof payload === "object" &&
-      "code" in payload &&
-      "message" in payload &&
-      "data" in payload
+      !payload ||
+      typeof payload !== "object" ||
+      !("code" in payload) ||
+      !("message" in payload) ||
+      !("data" in payload)
     ) {
-      const wrapped = payload as ApiResponse<T>;
-
-      if (!response.ok || (wrapped.code !== 0 && wrapped.code !== 200)) {
-        throw new Error(wrapped.message || "请求失败");
-      }
-
-      return wrapped.data;
+      throw new ApiError("响应格式无效，请稍后重试", {
+        type: "parse",
+      });
     }
 
-    if (!response.ok) {
-      throw new Error("请求失败");
+    const wrapped = payload as ApiResponse<T>;
+    if (wrapped.code === API_SUCCESS_CODE) {
+      return wrapped.data as T;
     }
 
-    return payload as T;
+    const message =
+      wrapped.message ||
+      (wrapped.code === API_SYSTEM_ERROR_CODE
+        ? "server internal error"
+        : "request failed");
+    const error = new ApiError(message, {
+      code: wrapped.code,
+      type: wrapped.code === API_UNAUTHORIZED_CODE ? "auth" : "business",
+    });
+
+    if (auth && wrapped.code === API_UNAUTHORIZED_CODE) {
+      notifyAuthInvalid("登录状态已失效，请重新登录");
+    }
+
+    throw error;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("请求超时，请稍后重试");
+      const timeoutError = new ApiError("请求超时，请稍后重试", {
+        type: "timeout",
+        cause: error,
+      });
+      logErrorInDev(timeoutError);
+      throw timeoutError;
     }
 
-    if (error instanceof Error) {
+    if (error instanceof ApiError) {
+      if (error.type !== "business" && error.type !== "auth") {
+        logErrorInDev(error);
+      }
+
       throw error;
     }
 
-    throw new Error("网络异常，请稍后重试");
+    const networkError = new ApiError("网络异常，请稍后重试", {
+      type: "network",
+      cause: error,
+    });
+    logErrorInDev(networkError);
+    throw networkError;
   } finally {
     clearTimeout(timeoutId);
   }

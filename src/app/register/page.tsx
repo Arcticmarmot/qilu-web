@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToastMessage } from "@/components/ui/toast";
 import { registerUser } from "@/lib/api";
+import { getErrorMessage } from "@/lib/error";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function RegisterPage() {
       await registerUser({ nickname, email, password });
       router.replace("/login");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "注册失败");
+      setError(getErrorMessage(err, "注册失败"));
     } finally {
       setIsSubmitting(false);
     }

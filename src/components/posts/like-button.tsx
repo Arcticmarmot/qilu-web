@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { likePost, unlikePost } from "@/lib/api";
 import { cx } from "@/lib/cx";
+import { getErrorMessage, isAuthError } from "@/lib/error";
 
 type LikeButtonProps = {
   postId: number | string;
@@ -48,7 +49,9 @@ export function LikeButton({
       }
     } catch (error) {
       onChange(previous);
-      onError?.(error instanceof Error ? error.message : "点赞失败");
+      if (!isAuthError(error)) {
+        onError?.(getErrorMessage(error, "点赞失败"));
+      }
     } finally {
       setIsLoading(false);
     }

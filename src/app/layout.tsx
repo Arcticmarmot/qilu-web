@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AuthSessionHandler } from "@/components/auth/auth-session-handler";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -15,7 +16,10 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <AuthSessionHandler />
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useToastMessage } from "@/components/ui/toast";
 import { login } from "@/lib/api";
 import { setToken } from "@/lib/auth";
+import { getErrorMessage } from "@/lib/error";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,7 +30,7 @@ export default function LoginPage() {
       setToken(result.token);
       router.replace("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "登录失败");
+      setError(getErrorMessage(err, "登录失败"));
     } finally {
       setIsSubmitting(false);
     }

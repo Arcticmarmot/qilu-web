@@ -27,6 +27,43 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const TOAST_EVENT = "qilu:toast";
 
+function ToastIcon({ type }: { type: ToastType }) {
+  if (type === "error") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        className="h-4 w-4 shrink-0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v5" />
+        <path d="M12 16h.01" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12.5 2.3 2.3 4.7-5.3" />
+    </svg>
+  );
+}
+
 export function showToast(message: string, type: ToastType = "success") {
   if (typeof window === "undefined" || !message) {
     return;
@@ -76,14 +113,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={cx(
-              "pointer-events-auto max-w-[calc(100vw-2rem)] rounded-md border px-4 py-3 text-sm leading-6 shadow-subtle backdrop-blur",
+              "pointer-events-auto flex max-w-[calc(100vw-2rem)] items-start gap-2 rounded-md border px-4 py-3 text-sm leading-6 shadow-subtle backdrop-blur",
               toast.type === "error"
                 ? "border-danger/35 bg-danger/15 text-danger"
                 : "border-accent/40 bg-soft/95 text-accent-strong",
             )}
             role={toast.type === "error" ? "alert" : "status"}
           >
-            {toast.message}
+            <ToastIcon type={toast.type} />
+            <span>{toast.message}</span>
           </div>
         ))}
       </div>

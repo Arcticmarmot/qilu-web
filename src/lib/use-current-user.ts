@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCurrentUser, type User } from "@/lib/api";
-import { clearToken, getToken } from "@/lib/auth";
+import { getToken } from "@/lib/auth";
+import { getErrorMessage, isAuthError } from "@/lib/error";
 
 export function useCurrentUser() {
   const router = useRouter();
@@ -25,9 +26,13 @@ export function useCurrentUser() {
         setUser(currentUser);
       })
       .catch((err: unknown) => {
-        clearToken();
-        setError(err instanceof Error ? err.message : "登录状态已失效");
-        router.replace("/login");
+        if (isAuthError(err)) {
+          setUser(null);
+          setError("");
+          return;
+        }
+
+        setError(getErrorMessage(err, "加载用户信息失败"));
       })
       .finally(() => {
         setIsLoading(false);

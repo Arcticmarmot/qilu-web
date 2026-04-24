@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast, useToastMessage } from "@/components/ui/toast";
 import { createPost } from "@/lib/api";
+import { getErrorMessage, isAuthError } from "@/lib/error";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 const MAX_TITLE_LENGTH = 128;
@@ -58,7 +59,9 @@ export default function NewPostPage() {
       notify("发布成功", "success");
       router.replace(`/posts/me/${postId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "发布失败，请稍后重试");
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err, "发布失败，请稍后重试"));
+      }
     } finally {
       setIsSubmitting(false);
     }
