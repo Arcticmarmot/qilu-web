@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { LikeButton } from "@/components/posts/like-button";
 import { formatDate } from "@/components/posts/post-utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -10,8 +11,12 @@ import {
   deletePostComment,
   getCommentReplies,
   getPostComments,
+  likeComment,
+  likeCommentReply,
   type CommentReply,
   type PostComment,
+  unlikeComment,
+  unlikeCommentReply,
 } from "@/lib/api";
 import { cx } from "@/lib/cx";
 import { getErrorMessage, isAuthError } from "@/lib/error";
@@ -44,6 +49,8 @@ export function CommentPanel({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deletingReplyId, setDeletingReplyId] = useState<number | null>(null);
   const [replyMap, setReplyMap] = useState<Record<number, CommentReply[]>>({});
+  const [expandedReplyMap, setExpandedReplyMap] = useState<Record<number, boolean>>({});
+  const [loadingReplyMap, setLoadingReplyMap] = useState<Record<number, boolean>>({});
   const [isReplySubmitting, setIsReplySubmitting] = useState<number | null>(null);
   const [replyDraftMap, setReplyDraftMap] = useState<Record<number, string>>({});
   const [replyComposerMap, setReplyComposerMap] = useState<
@@ -55,6 +62,11 @@ export function CommentPanel({
 
   const loadRepliesForComment = useCallback(
     async (comment: PostComment) => {
+      setLoadingReplyMap((current) => ({
+        ...current,
+        [comment.id]: true,
+      }));
+
       try {
         const result = await getCommentReplies(postId, comment.id);
         const sortedReplies = [...result].sort((left, right) => {
@@ -67,10 +79,19 @@ export function CommentPanel({
           ...current,
           [comment.id]: sortedReplies,
         }));
+        setExpandedReplyMap((current) => ({
+          ...current,
+          [comment.id]: true,
+        }));
       } catch (error) {
         if (!isAuthError(error)) {
           onError?.(getErrorMessage(error, "评论回复加载失败"));
         }
+      } finally {
+        setLoadingReplyMap((current) => ({
+          ...current,
+          [comment.id]: false,
+        }));
       }
     },
     [onError, postId],
@@ -85,32 +106,38 @@ export function CommentPanel({
       setComments(result);
       onCountChange?.(result.length);
 
+      const validCommentIds = new Set(result.map((comment) => comment.id));
+
       if (!result.length) {
         setReplyMap({});
+        setExpandedReplyMap({});
+        setLoadingReplyMap({});
         setReplyDraftMap({});
         setReplyComposerMap({});
         return;
       }
 
-      const replyResults = await Promise.all(
-        result.map(async (comment) => {
-          const replies = await getCommentReplies(postId, comment.id);
-          return {
-            commentId: comment.id,
-            replies: [...replies].sort((left, right) => {
-              const leftTime = left.createdAt ? new Date(left.createdAt).getTime() : 0;
-              const rightTime = right.createdAt ? new Date(right.createdAt).getTime() : 0;
-              return leftTime - rightTime;
-            }),
-          };
-        }),
+      setReplyMap((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([commentId]) =>
+            validCommentIds.has(Number(commentId)),
+          ),
+        ),
       );
-
-      const nextReplyMap: Record<number, CommentReply[]> = {};
-      for (const item of replyResults) {
-        nextReplyMap[item.commentId] = item.replies;
-      }
-      setReplyMap(nextReplyMap);
+      setExpandedReplyMap((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([commentId]) =>
+            validCommentIds.has(Number(commentId)),
+          ),
+        ),
+      );
+      setLoadingReplyMap((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([commentId]) =>
+            validCommentIds.has(Number(commentId)),
+          ),
+        ),
+      );
     } catch (error) {
       if (!isAuthError(error)) {
         onError?.(getErrorMessage(error, "评论加载失败"));
@@ -175,6 +202,16 @@ export function CommentPanel({
         delete next[commentId];
         return next;
       });
+      setExpandedReplyMap((current) => {
+        const next = { ...current };
+        delete next[commentId];
+        return next;
+      });
+      setLoadingReplyMap((current) => {
+        const next = { ...current };
+        delete next[commentId];
+        return next;
+      });
       onCountChange?.(nextComments.length);
       onSuccess?.("评论已删除");
     } catch (error) {
@@ -200,6 +237,23 @@ export function CommentPanel({
         ...current,
         [comment.id]: (current[comment.id] || []).filter((reply) => reply.id !== replyId),
       }));
+      setComments((current) =>
+        current.map((item) =>
+          item.id === comment.id
+            ? { ...item, replyCount: Math.max((item.replyCount ?? 0) - 1, 0) }
+            : item,
+        ),
+      );
+      setExpandedReplyMap((current) => {
+        const nextReplyCount = Math.max((comment.replyCount ?? 0) - 1, 0);
+        if (nextReplyCount > 0) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[comment.id];
+        return next;
+      });
       onSuccess?.("回复已删除");
     } catch (error) {
       if (!isAuthError(error)) {
@@ -244,6 +298,13 @@ export function CommentPanel({
         parentReplyId: target.parentReplyId,
         content: nextDraft,
       });
+      setComments((current) =>
+        current.map((item) =>
+          item.id === comment.id
+            ? { ...item, replyCount: (item.replyCount ?? 0) + 1 }
+            : item,
+        ),
+      );
       setReplyDraftMap((current) => ({ ...current, [comment.id]: "" }));
       setReplyComposerMap((current) => {
         const next = { ...current };
@@ -259,6 +320,54 @@ export function CommentPanel({
     } finally {
       setIsReplySubmitting(null);
     }
+  };
+
+  const handleCommentLikeChange = (
+    commentId: number,
+    next: { likedByMe: boolean; likeCount: number },
+  ) => {
+    setComments((current) =>
+      current.map((comment) =>
+        comment.id === commentId ? { ...comment, ...next } : comment,
+      ),
+    );
+  };
+
+  const handleReplyLikeChange = (
+    commentId: number,
+    replyId: number,
+    next: { likedByMe: boolean; likeCount: number },
+  ) => {
+    setReplyMap((current) => ({
+      ...current,
+      [commentId]: (current[commentId] || []).map((reply) =>
+        reply.id === replyId ? { ...reply, ...next } : reply,
+      ),
+    }));
+  };
+
+  const handleToggleReplies = async (comment: PostComment) => {
+    if ((comment.replyCount ?? 0) <= 0 || loadingReplyMap[comment.id]) {
+      return;
+    }
+
+    if (expandedReplyMap[comment.id]) {
+      setExpandedReplyMap((current) => ({
+        ...current,
+        [comment.id]: false,
+      }));
+      return;
+    }
+
+    if (replyMap[comment.id]) {
+      setExpandedReplyMap((current) => ({
+        ...current,
+        [comment.id]: true,
+      }));
+      return;
+    }
+
+    await loadRepliesForComment(comment);
   };
 
   return (
@@ -330,7 +439,10 @@ export function CommentPanel({
               const canDelete = Boolean(
                 currentUserUuid && comment.userUuid === currentUserUuid,
               );
+              const replyCount = comment.replyCount ?? 0;
               const replies = replyMap[comment.id] || [];
+              const isRepliesExpanded = Boolean(expandedReplyMap[comment.id]);
+              const isRepliesLoading = Boolean(loadingReplyMap[comment.id]);
               const replyDraft = replyDraftMap[comment.id] || "";
               const replyComposer = replyComposerMap[comment.id];
               const trimmedReplyDraft = replyDraft.trim();
@@ -356,6 +468,18 @@ export function CommentPanel({
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
+                          <LikeButton
+                            liked={Boolean(comment.likedByMe)}
+                            count={comment.likeCount ?? 0}
+                            onLike={() => likeComment(postId, comment.id)}
+                            onUnlike={() => unlikeComment(postId, comment.id)}
+                            onChange={(next) =>
+                              handleCommentLikeChange(comment.id, next)
+                            }
+                            onError={onError}
+                            onSuccess={onSuccess}
+                            size="sm"
+                          />
                           <button
                             type="button"
                             className="inline-flex h-8 items-center justify-center self-start rounded-md border border-line px-3 text-xs font-medium text-foreground transition hover:border-accent hover:text-accent sm:self-auto"
@@ -384,6 +508,23 @@ export function CommentPanel({
                       <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-foreground">
                         {comment.content}
                       </p>
+
+                      {replyCount > 0 ? (
+                        <div className="mt-4">
+                          <button
+                            type="button"
+                            className="inline-flex h-8 items-center justify-center rounded-md border border-line px-3 text-xs font-medium text-muted transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={isRepliesLoading}
+                            onClick={() => void handleToggleReplies(comment)}
+                          >
+                            {isRepliesLoading
+                              ? "加载回复中"
+                              : isRepliesExpanded
+                                ? "收起回复"
+                                : `展开 ${replyCount} 条回复`}
+                          </button>
+                        </div>
+                      ) : null}
 
                       {replyComposer ? (
                         <div className="mt-4 rounded-md border border-line bg-panel p-3">
@@ -440,65 +581,85 @@ export function CommentPanel({
                         </div>
                       ) : null}
 
-                      {replies.length ? (
+                      {isRepliesExpanded ? (
                         <div className="mt-4 rounded-md border border-line bg-panel p-3">
                           <p className="text-xs tracking-[0.16em] text-muted">
-                            回复列表 ({replies.length})
+                            回复列表 ({replyCount})
                           </p>
-                          <div className="mt-3 grid gap-2">
-                            {replies.map((reply) => (
-                              <div key={reply.id} className="rounded-md border border-line bg-soft p-3">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <p className="truncate text-xs text-foreground">
-                                      <span className="font-medium">
-                                        {reply.nickname || reply.userUuid}
-                                      </span>
-                                      {reply.targetNickname ? (
-                                        <span className="text-muted">
-                                          {" "}
-                                          回复 {reply.targetNickname}
+                          {replies.length ? (
+                            <div className="mt-3 grid gap-2">
+                              {replies.map((reply) => (
+                                <div key={reply.id} className="rounded-md border border-line bg-soft p-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-xs text-foreground">
+                                        <span className="font-medium">
+                                          {reply.nickname || reply.userUuid}
                                         </span>
-                                      ) : null}
-                                    </p>
-                                    <p className="mt-1 text-xs text-muted">
-                                      {reply.createdAt
-                                        ? formatDate(reply.createdAt)
-                                        : "刚刚"}
-                                    </p>
-                                  </div>
-                                  <div className="flex shrink-0 items-center gap-2">
-                                    <button
-                                      type="button"
-                                      className="inline-flex h-7 items-center justify-center rounded-md border border-line px-2.5 text-xs text-foreground transition hover:border-accent hover:text-accent"
-                                      onClick={() =>
-                                        handleReplyTarget(
-                                          comment,
-                                          reply.id,
-                                          reply.nickname || reply.userUuid,
-                                        )
-                                      }
-                                    >
-                                      回复
-                                    </button>
-                                    {currentUserUuid && reply.userUuid === currentUserUuid ? (
+                                        {reply.targetNickname ? (
+                                          <span className="text-muted">
+                                            {" "}
+                                            回复 {reply.targetNickname}
+                                          </span>
+                                        ) : null}
+                                      </p>
+                                      <p className="mt-1 text-xs text-muted">
+                                        {reply.createdAt
+                                          ? formatDate(reply.createdAt)
+                                          : "刚刚"}
+                                      </p>
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-2">
+                                      <LikeButton
+                                        liked={Boolean(reply.likedByMe)}
+                                        count={reply.likeCount ?? 0}
+                                        onLike={() =>
+                                          likeCommentReply(postId, comment.id, reply.id)
+                                        }
+                                        onUnlike={() =>
+                                          unlikeCommentReply(postId, comment.id, reply.id)
+                                        }
+                                        onChange={(next) =>
+                                          handleReplyLikeChange(comment.id, reply.id, next)
+                                        }
+                                        onError={onError}
+                                        onSuccess={onSuccess}
+                                        size="sm"
+                                      />
                                       <button
                                         type="button"
-                                        className="inline-flex h-7 items-center justify-center rounded-md border border-[#8f2424] px-2.5 text-xs text-[#d98d8d] transition hover:border-[#b73535] hover:bg-[#8f2424]/12 hover:text-[#f0b0b0] disabled:cursor-not-allowed disabled:opacity-60"
-                                        disabled={deletingReplyId === reply.id}
-                                        onClick={() => void handleDeleteReply(comment, reply.id)}
+                                        className="inline-flex h-7 items-center justify-center rounded-md border border-line px-2.5 text-xs text-foreground transition hover:border-accent hover:text-accent"
+                                        onClick={() =>
+                                          handleReplyTarget(
+                                            comment,
+                                            reply.id,
+                                            reply.nickname || reply.userUuid,
+                                          )
+                                        }
                                       >
-                                        {deletingReplyId === reply.id ? "删除中" : "删除"}
+                                        回复
                                       </button>
-                                    ) : null}
+                                      {currentUserUuid && reply.userUuid === currentUserUuid ? (
+                                        <button
+                                          type="button"
+                                          className="inline-flex h-7 items-center justify-center rounded-md border border-[#8f2424] px-2.5 text-xs text-[#d98d8d] transition hover:border-[#b73535] hover:bg-[#8f2424]/12 hover:text-[#f0b0b0] disabled:cursor-not-allowed disabled:opacity-60"
+                                          disabled={deletingReplyId === reply.id}
+                                          onClick={() => void handleDeleteReply(comment, reply.id)}
+                                        >
+                                          {deletingReplyId === reply.id ? "删除中" : "删除"}
+                                        </button>
+                                      ) : null}
+                                    </div>
                                   </div>
+                                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
+                                    {reply.content}
+                                  </p>
                                 </div>
-                                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
-                                  {reply.content}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-3 text-sm text-muted">暂无回复内容</p>
+                          )}
                         </div>
                       ) : null}
                     </div>

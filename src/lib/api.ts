@@ -40,6 +40,9 @@ export type PostComment = {
   userUuid: string;
   nickname?: string;
   content: string;
+  likeCount?: number;
+  likedByMe?: boolean;
+  replyCount?: number;
   createdAt?: string;
 };
 
@@ -52,7 +55,14 @@ export type CommentReply = {
   targetUserUuid?: string;
   targetNickname?: string;
   content: string;
+  likeCount?: number;
+  likedByMe?: boolean;
   createdAt?: string;
+};
+
+type LikeStatePayload = {
+  likedByMe?: boolean;
+  likeByMe?: boolean;
 };
 
 export type PageResult<T> = {
@@ -130,6 +140,13 @@ function normalizePostId(value: unknown) {
   return null;
 }
 
+function normalizeLikedState<T extends LikeStatePayload>(value: T) {
+  return {
+    ...value,
+    likedByMe: value.likedByMe ?? value.likeByMe ?? false,
+  };
+}
+
 export async function createPost(input: PostInput) {
   const data = await request<number | string | null>("/posts", {
     method: "POST",
@@ -182,13 +199,13 @@ export function getMyPost(postId: number | string) {
 }
 
 export function likePost(postId: number | string) {
-  return request<null>(`/likes/posts/${postId}`, {
+  return request<null>(`/posts/${postId}/likes`, {
     method: "POST",
   });
 }
 
 export function unlikePost(postId: number | string) {
-  return request<null>(`/likes/posts/${postId}`, {
+  return request<null>(`/posts/${postId}/likes`, {
     method: "DELETE",
   });
 }
@@ -207,7 +224,9 @@ export function deletePost(postId: number | string) {
 }
 
 export function getPostComments(postId: number | string) {
-  return request<PostComment[]>(`/posts/${postId}/comments`);
+  return request<PostComment[]>(`/posts/${postId}/comments`).then((comments) =>
+    comments.map((comment) => normalizeLikedState(comment)),
+  );
 }
 
 export function createPostComment(postId: number | string, input: { content: string }) {
@@ -226,13 +245,31 @@ export function deletePostComment(
   });
 }
 
+export function likeComment(
+  postId: number | string,
+  commentId: number | string,
+) {
+  return request<null>(`/posts/${postId}/comments/${commentId}/likes`, {
+    method: "POST",
+  });
+}
+
+export function unlikeComment(
+  postId: number | string,
+  commentId: number | string,
+) {
+  return request<null>(`/posts/${postId}/comments/${commentId}/likes`, {
+    method: "DELETE",
+  });
+}
+
 export function getCommentReplies(
   postId: number | string,
   rootCommentId: number | string,
 ) {
   return request<CommentReply[]>(
     `/posts/${postId}/comments/${rootCommentId}/replies`,
-  );
+  ).then((replies) => replies.map((reply) => normalizeLikedState(reply)));
 }
 
 export function createCommentReply(
@@ -253,6 +290,32 @@ export function deleteCommentReply(
 ) {
   return request<null>(
     `/posts/${postId}/comments/${rootCommentId}/replies/${replyId}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+export function likeCommentReply(
+  postId: number | string,
+  rootCommentId: number | string,
+  replyId: number | string,
+) {
+  return request<null>(
+    `/posts/${postId}/comments/${rootCommentId}/replies/${replyId}/likes`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function unlikeCommentReply(
+  postId: number | string,
+  rootCommentId: number | string,
+  replyId: number | string,
+) {
+  return request<null>(
+    `/posts/${postId}/comments/${rootCommentId}/replies/${replyId}/likes`,
     {
       method: "DELETE",
     },

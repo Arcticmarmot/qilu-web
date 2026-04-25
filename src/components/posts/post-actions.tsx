@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LikeButton } from "@/components/posts/like-button";
+import { likePost, unlikePost } from "@/lib/api";
 import { cx } from "@/lib/cx";
 
 type SocialActionsProps = {
@@ -40,9 +41,10 @@ export function SocialActions({
   return (
     <div className={cx("flex flex-wrap items-center gap-2", compact ? "" : "rounded-md border border-line bg-soft p-2")}>
       <LikeButton
-        postId={postId}
-        likedByMe={likedByMe}
-        likeCount={likeCount}
+        liked={likedByMe}
+        count={likeCount}
+        onLike={() => likePost(postId)}
+        onUnlike={() => unlikePost(postId)}
         onChange={onLikeChange}
         onError={onError}
         onSuccess={onSuccess}

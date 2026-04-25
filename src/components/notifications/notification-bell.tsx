@@ -104,17 +104,66 @@ function isUnread(notification: NotificationListItem) {
   return notification.isRead === 0;
 }
 
+function normalizeEntityType(entityType?: string) {
+  return entityType?.trim().toUpperCase().replaceAll(/\s+/g, "_") ?? "";
+}
+
+function isPostEntityType(entityType?: string) {
+  return normalizeEntityType(entityType) === "POST";
+}
+
+function isCommentEntityType(entityType?: string) {
+  const normalized = normalizeEntityType(entityType);
+  return normalized === "COMMENT" || normalized === "POST_COMMENT";
+}
+
+function isReplyEntityType(entityType?: string) {
+  const normalized = normalizeEntityType(entityType);
+  return normalized === "REPLY" || normalized === "COMMENT_REPLY";
+}
+
+function getLikeActionText(notification: NotificationListItem) {
+  if (isCommentEntityType(notification.entityType)) {
+    return "赞了你的评论";
+  }
+
+  if (isReplyEntityType(notification.entityType)) {
+    return "赞了你的回复";
+  }
+
+  return "赞了你的帖子";
+}
+
+function getLikePreviewFallback(notification: NotificationListItem) {
+  if (isCommentEntityType(notification.entityType)) {
+    return "暂无评论预览";
+  }
+
+  if (isReplyEntityType(notification.entityType)) {
+    return "暂无回复预览";
+  }
+
+  return "暂无帖子预览";
+}
+
 function getNotificationHref(notification: NotificationListItem, mode: NotificationMode) {
-  const postId = notification.postId ?? notification.entityId;
-  if (!postId) {
+  if (mode === "like") {
+    if (isPostEntityType(notification.entityType)) {
+      return notification.entityId ? `/posts/${notification.entityId}` : "/posts";
+    }
+
+    if (notification.postId) {
+      return `/posts/${notification.postId}#comments`;
+    }
+
     return "/posts";
   }
 
-  if (mode === "like") {
-    return `/posts/me/${postId}`;
+  if (!notification.postId) {
+    return "/posts";
   }
 
-  return `/posts/me/${postId}#comments`;
+  return `/posts/${notification.postId}#comments`;
 }
 
 function NotificationModeIcon({ mode }: { mode: NotificationMode }) {
@@ -220,6 +269,10 @@ function NotificationCard({
   const config = NOTIFICATION_CONFIG[mode];
   const preview = getNotificationPreview(notification);
   const contentPreview = getContentPreview(notification);
+  const actionText =
+    mode === "like" ? getLikeActionText(notification) : config.actionText;
+  const previewFallback =
+    mode === "like" ? getLikePreviewFallback(notification) : config.previewFallback;
 
   return (
     <Link
@@ -235,11 +288,11 @@ function NotificationCard({
           <span className="text-accent">
             {notification.actorNickname || notification.actorUuid}
           </span>
-          {` ${config.actionText}`}
+          {` ${actionText}`}
         </p>
         <span className="inline-flex max-w-32 shrink-0 items-center rounded-full bg-accent/14 px-2.5 py-1 text-[11px] font-medium text-accent">
           <span className="line-clamp-1 break-words">
-            {preview || config.previewFallback}
+            {preview || previewFallback}
           </span>
         </span>
       </div>
