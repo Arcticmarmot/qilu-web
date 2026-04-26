@@ -78,7 +78,7 @@ function PostCard({
   const blockHeights = ["min-h-[11rem]", "min-h-[12.5rem]", "min-h-[14rem]", "min-h-[12rem]"];
   const previewLines = ["line-clamp-2", "line-clamp-3", "line-clamp-4"];
   const size = blockHeights[index % blockHeights.length];
-  const preview = post.contentPreview?.trim() || "暂无内容预览";
+  const preview = post.contentSnippet?.trim() || "暂无内容预览";
   const previewLine = previewLines[(post.id + index) % previewLines.length];
   const bannerHeights = ["h-14", "h-16", "h-20"];
   const bannerHeight = bannerHeights[(post.id + index) % bannerHeights.length];

@@ -26,7 +26,7 @@ export type PostListItem = {
   userUuid: string;
   nickname: string;
   title?: string;
-  contentPreview?: string;
+  contentSnippet?: string;
   visibility?: 1 | 2;
   likeCount: number;
   likedByMe: boolean;
@@ -81,9 +81,9 @@ export type NotificationListItem = {
   entityType?: string;
   entityId?: number;
   postId?: number;
-  entityPreview?: string;
+  postSnippet?: string;
+  entitySnippet?: string;
   contentPreview?: string;
-  entityTitlePreview?: string;
   isRead: 0 | 1;
   createdAt?: string;
 };

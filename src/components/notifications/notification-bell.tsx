@@ -92,8 +92,15 @@ function getNotificationTime(notification: NotificationListItem) {
   return notification.createdAt ?? "";
 }
 
-function getNotificationPreview(notification: NotificationListItem) {
-  return notification.entityPreview ?? notification.entityTitlePreview ?? "";
+function getNotificationPreview(
+  notification: NotificationListItem,
+  mode: NotificationMode,
+) {
+  if (mode === "comment") {
+    return notification.postSnippet ?? notification.entitySnippet ?? "";
+  }
+
+  return notification.entitySnippet ?? notification.postSnippet ?? "";
 }
 
 function getContentPreview(notification: NotificationListItem) {
@@ -267,7 +274,7 @@ function NotificationCard({
   onClose?: () => void;
 }) {
   const config = NOTIFICATION_CONFIG[mode];
-  const preview = getNotificationPreview(notification);
+  const preview = getNotificationPreview(notification, mode);
   const contentPreview = getContentPreview(notification);
   const actionText =
     mode === "like" ? getLikeActionText(notification) : config.actionText;
