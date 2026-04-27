@@ -6,6 +6,7 @@ export type User = {
   email: string;
   status: number;
   createAt?: string;
+  createdAt?: string;
 };
 
 export type Post = {
@@ -27,6 +28,7 @@ export type PostListItem = {
   nickname: string;
   title?: string;
   contentSnippet?: string;
+  contentPreview?: string;
   visibility?: 1 | 2;
   likeCount: number;
   likedByMe: boolean;
@@ -78,10 +80,15 @@ export type NotificationListItem = {
   replyId?: number;
   actorUuid: string;
   actorNickname?: string;
+  postId?: number;
+  creationType?: string;
+  creationId?: number;
+  creationSnippet?: string;
+  postSnippet?: string;
+  contentSnippet?: string;
   entityType?: string;
   entityId?: number;
-  postId?: number;
-  postSnippet?: string;
+  entityPreview?: string;
   entitySnippet?: string;
   contentPreview?: string;
   isRead: 0 | 1;
@@ -147,6 +154,13 @@ function normalizeLikedState<T extends LikeStatePayload>(value: T) {
   };
 }
 
+function normalizePostListItem<T extends PostListItem>(value: T) {
+  return {
+    ...normalizeLikedState(value),
+    contentSnippet: value.contentSnippet ?? value.contentPreview ?? "",
+  };
+}
+
 export async function createPost(input: PostInput) {
   const data = await request<number | string | null>("/posts", {
     method: "POST",
@@ -169,7 +183,12 @@ export function getPostPage(input: { current?: number; size?: number } = {}) {
 
   const query = params.toString();
 
-  return request<PageResult<PostListItem>>(`/posts${query ? `?${query}` : ""}`);
+  return request<PageResult<PostListItem>>(`/posts${query ? `?${query}` : ""}`).then(
+    (page) => ({
+      ...page,
+      records: page.records.map((post) => normalizePostListItem(post)),
+    }),
+  );
 }
 
 export function getMyPostPage(input: { current?: number; size?: number } = {}) {
@@ -187,7 +206,10 @@ export function getMyPostPage(input: { current?: number; size?: number } = {}) {
 
   return request<PageResult<PostListItem>>(
     `/posts/me${query ? `?${query}` : ""}`,
-  );
+  ).then((page) => ({
+    ...page,
+    records: page.records.map((post) => normalizePostListItem(post)),
+  }));
 }
 
 export function getPost(postId: number | string) {

@@ -5,11 +5,11 @@ definition so future frontend changes can be diffed against a concrete baseline.
 
 Current baseline:
 
-- `openapi-2026-04-22.json`: snapshot fetched from `http://localhost:8080/v3/api-docs`
+- `openapi-2026-04-27.json`: snapshot fetched from `http://localhost:8080/v3/api-docs`
 - `latest.json`: copy of the current baseline for quick comparison scripts or tooling
 
-Notable changes recorded on 2026-04-22:
+Notable changes recorded on 2026-04-27:
 
-- `DELETE /posts/{postId}/comments/{commentId}` replaced the previous top-level comment delete path
-- `DELETE /posts/{postId}/comments/{commentId}/replies/{replyId}` was added for deleting second-level replies
-- comment/reply list and create endpoints remain under the nested post/comment path structure
+- notification payloads now use `creationType` / `creationId` / `creationSnippet` and `contentSnippet` instead of the earlier preview-style fields
+- comment notifications now expose `postId` and `postSnippet` explicitly
+- likes moved from `/likes/posts/{postId}` to `/posts/{postId}/likes`, and reply notification endpoints were added under `/reply-notifications`

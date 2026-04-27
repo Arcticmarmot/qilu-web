@@ -92,49 +92,71 @@ function getNotificationTime(notification: NotificationListItem) {
   return notification.createdAt ?? "";
 }
 
+function normalizeCreationType(value?: string) {
+  return value?.trim().toUpperCase().replaceAll(/\s+/g, "_") ?? "";
+}
+
+function getNotificationCreationType(notification: NotificationListItem) {
+  return normalizeCreationType(notification.creationType ?? notification.entityType);
+}
+
+function getNotificationCreationId(notification: NotificationListItem) {
+  return notification.creationId ?? notification.entityId;
+}
+
 function getNotificationPreview(
   notification: NotificationListItem,
   mode: NotificationMode,
 ) {
   if (mode === "comment") {
-    return notification.postSnippet ?? notification.entitySnippet ?? "";
+    return (
+      notification.postSnippet ??
+      notification.creationSnippet ??
+      notification.entityPreview ??
+      notification.entitySnippet ??
+      ""
+    );
   }
 
-  return notification.entitySnippet ?? notification.postSnippet ?? "";
+  return (
+    notification.creationSnippet ??
+    notification.entityPreview ??
+    notification.entitySnippet ??
+    notification.postSnippet ??
+    ""
+  );
 }
 
 function getContentPreview(notification: NotificationListItem) {
-  return notification.contentPreview ?? "";
+  return notification.contentSnippet ?? notification.contentPreview ?? "";
 }
 
 function isUnread(notification: NotificationListItem) {
   return notification.isRead === 0;
 }
 
-function normalizeEntityType(entityType?: string) {
-  return entityType?.trim().toUpperCase().replaceAll(/\s+/g, "_") ?? "";
-}
-
 function isPostEntityType(entityType?: string) {
-  return normalizeEntityType(entityType) === "POST";
+  return normalizeCreationType(entityType) === "POST";
 }
 
 function isCommentEntityType(entityType?: string) {
-  const normalized = normalizeEntityType(entityType);
+  const normalized = normalizeCreationType(entityType);
   return normalized === "COMMENT" || normalized === "POST_COMMENT";
 }
 
 function isReplyEntityType(entityType?: string) {
-  const normalized = normalizeEntityType(entityType);
+  const normalized = normalizeCreationType(entityType);
   return normalized === "REPLY" || normalized === "COMMENT_REPLY";
 }
 
 function getLikeActionText(notification: NotificationListItem) {
-  if (isCommentEntityType(notification.entityType)) {
+  const creationType = getNotificationCreationType(notification);
+
+  if (isCommentEntityType(creationType)) {
     return "赞了你的评论";
   }
 
-  if (isReplyEntityType(notification.entityType)) {
+  if (isReplyEntityType(creationType)) {
     return "赞了你的回复";
   }
 
@@ -142,11 +164,13 @@ function getLikeActionText(notification: NotificationListItem) {
 }
 
 function getLikePreviewFallback(notification: NotificationListItem) {
-  if (isCommentEntityType(notification.entityType)) {
+  const creationType = getNotificationCreationType(notification);
+
+  if (isCommentEntityType(creationType)) {
     return "暂无评论预览";
   }
 
-  if (isReplyEntityType(notification.entityType)) {
+  if (isReplyEntityType(creationType)) {
     return "暂无回复预览";
   }
 
@@ -154,9 +178,12 @@ function getLikePreviewFallback(notification: NotificationListItem) {
 }
 
 function getNotificationHref(notification: NotificationListItem, mode: NotificationMode) {
+  const creationType = getNotificationCreationType(notification);
+  const creationId = getNotificationCreationId(notification);
+
   if (mode === "like") {
-    if (isPostEntityType(notification.entityType)) {
-      return notification.entityId ? `/posts/${notification.entityId}` : "/posts";
+    if (isPostEntityType(creationType)) {
+      return creationId ? `/posts/${creationId}` : "/posts";
     }
 
     if (notification.postId) {
