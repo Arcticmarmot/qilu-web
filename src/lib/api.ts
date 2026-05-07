@@ -191,6 +191,32 @@ export function getPostPage(input: { current?: number; size?: number } = {}) {
   );
 }
 
+export function getHotPostList(input: {
+  range?: string;
+  current?: number;
+  size?: number;
+} = {}) {
+  const params = new URLSearchParams();
+
+  if (input.range) {
+    params.set("range", input.range);
+  }
+
+  if (input.current) {
+    params.set("current", String(input.current));
+  }
+
+  if (input.size) {
+    params.set("size", String(input.size));
+  }
+
+  const query = params.toString();
+
+  return request<PostListItem[]>(`/hot/posts${query ? `?${query}` : ""}`).then((posts) =>
+    posts.map((post) => normalizePostListItem(post)),
+  );
+}
+
 export function getMyPostPage(input: { current?: number; size?: number } = {}) {
   const params = new URLSearchParams();
 

@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast, useToastMessage } from "@/components/ui/toast";
 import {
+  getHotPostList,
   getPostPage,
   type PageResult,
   type PostListItem,
@@ -203,13 +204,35 @@ function Pagination({
   );
 }
 
+type FeedMode = "latest" | "hot";
+
+function readFeedMode(value: string | null): FeedMode {
+  return value === "hot" ? "hot" : "latest";
+}
+
+function buildFeedHref(mode: FeedMode, current = 1) {
+  const params = new URLSearchParams();
+
+  if (mode === "hot") {
+    params.set("mode", "hot");
+  } else if (current > 1) {
+    params.set("current", String(current));
+    params.set("size", String(POST_PAGE_SIZE));
+  }
+
+  const query = params.toString();
+  return query ? `/posts?${query}` : "/posts";
+}
+
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, error: userError, isLoading: isUserLoading } = useCurrentUser();
   const notify = useToast();
   const current = readPage(searchParams.get("current"));
+  const mode = readFeedMode(searchParams.get("mode"));
   const [page, setPage] = useState<PageResult<PostListItem> | null>(null);
+  const [hotPosts, setHotPosts] = useState<PostListItem[]>([]);
   const [error, setError] = useState("");
   const [likeError, setLikeError] = useState("");
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
@@ -221,8 +244,21 @@ function HomeContent() {
     setError("");
 
     try {
-      const result = await getPostPage({ current, size: POST_PAGE_SIZE });
-      setPage(result);
+      if (mode === "hot") {
+        setHotPosts([]);
+        setPage(null);
+        const result = await getHotPostList({
+          range: "DAILY",
+          current,
+          size: POST_PAGE_SIZE,
+        });
+        setHotPosts(result);
+      } else {
+        setPage(null);
+        setHotPosts([]);
+        const result = await getPostPage({ current, size: POST_PAGE_SIZE });
+        setPage(result);
+      }
     } catch (err) {
       if (!isAuthError(err)) {
         setError(getErrorMessage(err, "帖子加载失败"));
@@ -230,7 +266,7 @@ function HomeContent() {
     } finally {
       setIsLoadingPosts(false);
     }
-  }, [current]);
+  }, [current, mode]);
 
   useEffect(() => {
     if (!isUserLoading) {
@@ -243,16 +279,33 @@ function HomeContent() {
     [page?.total],
   );
   const fortune = useMemo(() => getDailyFortune(), []);
+  const visiblePosts = mode === "hot" ? hotPosts : page?.records ?? [];
+  const isHotMode = mode === "hot";
 
   const handlePageChange = (nextPage: number) => {
     const boundedPage = Math.min(Math.max(1, nextPage), totalPages);
-    router.push(`/posts?current=${boundedPage}&size=${POST_PAGE_SIZE}`);
+    router.push(buildFeedHref("latest", boundedPage));
+  };
+
+  const handleModeChange = (nextMode: FeedMode) => {
+    if (nextMode === mode) {
+      return;
+    }
+
+    router.push(buildFeedHref(nextMode, current));
   };
 
   const handleLikeChange = (
     postId: number,
     next: { likedByMe: boolean; likeCount: number },
   ) => {
+    if (isHotMode) {
+      setHotPosts((currentPosts) =>
+        currentPosts.map((post) => (post.id === postId ? { ...post, ...next } : post)),
+      );
+      return;
+    }
+
     setPage((currentPage) => {
       if (!currentPage) {
         return currentPage;
@@ -281,11 +334,39 @@ function HomeContent() {
             <div>
               <p className="text-xs tracking-[0.24em] text-accent">内容流</p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                最新发布
+                {isHotMode ? "最热帖子" : "最新发布"}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-                浏览公开内容，点进卡片查看完整正文、发布人和创建时间。
+                {isHotMode
+                  ? "当前接入 hot-post-controller 的日榜接口，方便直接切换和验证最热帖子数据。"
+                  : "浏览公开内容，点进卡片查看完整正文、发布人和创建时间。"}
               </p>
+              <div className="mt-4 inline-flex rounded-md border border-line bg-soft p-1">
+                <button
+                  type="button"
+                  className={cx(
+                    "rounded-md px-4 py-2 text-sm transition",
+                    !isHotMode
+                      ? "bg-foreground text-background"
+                      : "text-foreground hover:text-accent",
+                  )}
+                  onClick={() => handleModeChange("latest")}
+                >
+                  正常模式
+                </button>
+                <button
+                  type="button"
+                  className={cx(
+                    "rounded-md px-4 py-2 text-sm transition",
+                    isHotMode
+                      ? "bg-foreground text-background"
+                      : "text-foreground hover:text-accent",
+                  )}
+                  onClick={() => handleModeChange("hot")}
+                >
+                  最热帖子
+                </button>
+              </div>
             </div>
             <Link
               href="/posts/create"
@@ -305,10 +386,10 @@ function HomeContent() {
                   />
                 ))}
               </div>
-            ) : page?.records.length ? (
+            ) : visiblePosts.length ? (
               <>
                 <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 [&>*]:mb-4">
-                  {page.records.map((post, index) => (
+                  {visiblePosts.map((post, index) => (
                     <PostCard
                       key={post.id}
                       post={post}
@@ -319,16 +400,22 @@ function HomeContent() {
                     />
                   ))}
                 </div>
-                <Pagination
-                  current={page.current || current}
-                  total={page.total}
-                  onChange={handlePageChange}
-                />
+                {isHotMode ? null : (
+                  <Pagination
+                    current={page?.current || current}
+                    total={page?.total ?? 0}
+                    onChange={handlePageChange}
+                  />
+                )}
               </>
             ) : (
               <EmptyState
-                title="还没有帖子"
-                description="发布第一篇帖子后，这里会出现公开内容流。"
+                title={isHotMode ? "还没有最热帖子" : "还没有帖子"}
+                description={
+                  isHotMode
+                    ? "当前日榜还没有可展示的帖子，可以先发布或互动后再回来测试接口。"
+                    : "发布第一篇帖子后，这里会出现公开内容流。"
+                }
               />
             )}
           </div>
