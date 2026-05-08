@@ -24,6 +24,100 @@ type RequestOptions = {
   auth?: boolean;
 };
 
+async function parseApiResponse<T>(response: Response, auth: boolean) {
+  const text = await response.text();
+
+  if (!text.trim()) {
+    throw new ApiError("响应解析失败，请稍后重试", {
+      type: "parse",
+    });
+  }
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(text);
+  } catch (error) {
+    throw new ApiError("响应解析失败，请稍后重试", {
+      type: "parse",
+      cause: error,
+    });
+  }
+
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    !("code" in payload) ||
+    !("message" in payload) ||
+    !("data" in payload)
+  ) {
+    throw new ApiError("响应格式无效，请稍后重试", {
+      type: "parse",
+    });
+  }
+
+  const wrapped = payload as ApiResponse<T>;
+  if (wrapped.code === API_SUCCESS_CODE) {
+    return wrapped.data as T;
+  }
+
+  const message =
+    wrapped.message ||
+    (wrapped.code === API_SYSTEM_ERROR_CODE
+      ? "server internal error"
+      : "request failed");
+  const error = new ApiError(message, {
+    code: wrapped.code,
+    type: wrapped.code === API_UNAUTHORIZED_CODE ? "auth" : "business",
+  });
+
+  if (auth && wrapped.code === API_UNAUTHORIZED_CODE) {
+    notifyAuthInvalid("登录状态已失效，请重新登录");
+  }
+
+  throw error;
+}
+
+function handleRequestError(error: unknown): never {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    const timeoutError = new ApiError("请求超时，请稍后重试", {
+      type: "timeout",
+      cause: error,
+    });
+    logErrorInDev(timeoutError);
+    throw timeoutError;
+  }
+
+  if (error instanceof ApiError) {
+    if (error.type !== "business" && error.type !== "auth") {
+      logErrorInDev(error);
+    }
+
+    throw error;
+  }
+
+  const networkError = new ApiError("网络异常，请稍后重试", {
+    type: "network",
+    cause: error,
+  });
+  logErrorInDev(networkError);
+  throw networkError;
+}
+
+function getAuthHeaders(auth: boolean) {
+  const headers = new Headers({
+    Accept: "application/json",
+  });
+
+  if (auth) {
+    const token = getToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
+  return headers;
+}
+
 export async function request<T>(path: string, options: RequestOptions = {}) {
   const { method = "GET", body, auth = true } = options;
   const controller = new AbortController();
@@ -33,18 +127,8 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
   );
 
   try {
-    const headers = new Headers({
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    });
-
-    // 公开接口显式关闭鉴权，其余请求统一携带本地 JWT。
-    if (auth) {
-      const token = getToken();
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-    }
+    const headers = getAuthHeaders(auth);
+    headers.set("Content-Type", "application/json");
 
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method,
@@ -53,80 +137,37 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
       signal: controller.signal,
     });
 
-    const text = await response.text();
-
-    if (!text.trim()) {
-      throw new ApiError("响应解析失败，请稍后重试", {
-        type: "parse",
-      });
-    }
-
-    let payload: unknown;
-    try {
-      payload = JSON.parse(text);
-    } catch (error) {
-      throw new ApiError("响应解析失败，请稍后重试", {
-        type: "parse",
-        cause: error,
-      });
-    }
-
-    if (
-      !payload ||
-      typeof payload !== "object" ||
-      !("code" in payload) ||
-      !("message" in payload) ||
-      !("data" in payload)
-    ) {
-      throw new ApiError("响应格式无效，请稍后重试", {
-        type: "parse",
-      });
-    }
-
-    const wrapped = payload as ApiResponse<T>;
-    if (wrapped.code === API_SUCCESS_CODE) {
-      return wrapped.data as T;
-    }
-
-    const message =
-      wrapped.message ||
-      (wrapped.code === API_SYSTEM_ERROR_CODE
-        ? "server internal error"
-        : "request failed");
-    const error = new ApiError(message, {
-      code: wrapped.code,
-      type: wrapped.code === API_UNAUTHORIZED_CODE ? "auth" : "business",
-    });
-
-    if (auth && wrapped.code === API_UNAUTHORIZED_CODE) {
-      notifyAuthInvalid("登录状态已失效，请重新登录");
-    }
-
-    throw error;
+    return parseApiResponse<T>(response, auth);
   } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      const timeoutError = new ApiError("请求超时，请稍后重试", {
-        type: "timeout",
-        cause: error,
-      });
-      logErrorInDev(timeoutError);
-      throw timeoutError;
-    }
+    return handleRequestError(error);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
-    if (error instanceof ApiError) {
-      if (error.type !== "business" && error.type !== "auth") {
-        logErrorInDev(error);
-      }
+export async function requestForm<T>(
+  path: string,
+  formData: FormData,
+  options: Omit<RequestOptions, "body"> = {},
+) {
+  const { method = "POST", auth = true } = options;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT_MS,
+  );
 
-      throw error;
-    }
-
-    const networkError = new ApiError("网络异常，请稍后重试", {
-      type: "network",
-      cause: error,
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers: getAuthHeaders(auth),
+      body: formData,
+      signal: controller.signal,
     });
-    logErrorInDev(networkError);
-    throw networkError;
+
+    return parseApiResponse<T>(response, auth);
+  } catch (error) {
+    return handleRequestError(error);
   } finally {
     clearTimeout(timeoutId);
   }

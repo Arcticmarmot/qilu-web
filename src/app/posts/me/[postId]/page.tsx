@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AppHeader, PageLoading } from "@/components/product-shell";
 import { CommentPanel } from "@/components/posts/comment-panel";
+import { PostContent } from "@/components/posts/post-content";
 import { ManagementActions, SocialActions } from "@/components/posts/post-actions";
 import {
   formatDate,
@@ -126,9 +127,7 @@ export default function MyPostDetailPage() {
                     commentCount={commentCount}
                   />
                 </div>
-                <div className="mt-8 whitespace-pre-wrap break-words border-t border-line pt-8 text-base leading-8">
-                  {post.content}
-                </div>
+                <PostContent content={post.content} />
                 <CommentPanel
                   postId={post.id}
                   currentUserUuid={user?.uuid}

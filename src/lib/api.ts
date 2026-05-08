@@ -1,4 +1,4 @@
-import { request } from "@/lib/http";
+import { request, requestForm } from "@/lib/http";
 
 export type User = {
   uuid: string;
@@ -132,6 +132,14 @@ export type PostInput = {
   visibility: 1 | 2;
 };
 
+export type MediaUpload = {
+  objectKey: string;
+  url: string;
+  originalFilename: string;
+  contentType: string;
+  size: number;
+};
+
 function normalizePostId(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -170,6 +178,13 @@ export async function createPost(input: PostInput) {
   return normalizePostId(data);
 }
 
+export function uploadPostImage(file: File) {
+  const formData = new FormData();
+  formData.set("file", file);
+
+  return requestForm<MediaUpload>("/media/images", formData);
+}
+
 export function getPostPage(input: { current?: number; size?: number } = {}) {
   const params = new URLSearchParams();
 
@@ -192,15 +207,10 @@ export function getPostPage(input: { current?: number; size?: number } = {}) {
 }
 
 export function getHotPostList(input: {
-  range?: string;
   current?: number;
   size?: number;
 } = {}) {
   const params = new URLSearchParams();
-
-  if (input.range) {
-    params.set("range", input.range);
-  }
 
   if (input.current) {
     params.set("current", String(input.current));
