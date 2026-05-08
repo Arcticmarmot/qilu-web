@@ -248,7 +248,6 @@ function HomeContent() {
         setHotPosts([]);
         setPage(null);
         const result = await getHotPostList({
-          range: "DAILY",
           current,
           size: POST_PAGE_SIZE,
         });
