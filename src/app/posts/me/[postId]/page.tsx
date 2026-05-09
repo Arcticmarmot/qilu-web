@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AppHeader, PageLoading } from "@/components/product-shell";
 import { CommentPanel } from "@/components/posts/comment-panel";
 import { PostContent } from "@/components/posts/post-content";
+import { PostCover, PostMediaCarousel } from "@/components/posts/post-media";
 import { ManagementActions, SocialActions } from "@/components/posts/post-actions";
 import {
   formatDate,
@@ -84,6 +85,9 @@ export default function MyPostDetailPage() {
     }
   };
 
+  const hiddenImageUrls = post?.mediaList?.flatMap((item) => (item.url ? [item.url] : [])) ?? [];
+  const hasMedia = Boolean(post?.mediaList?.length);
+
   if (isUserLoading || isLoadingPost) {
     return <PageLoading />;
   }
@@ -94,10 +98,6 @@ export default function MyPostDetailPage() {
 
       <div className="mx-auto grid h-[calc(100vh-3.5rem)] max-w-6xl gap-5 overflow-hidden px-5 pb-4 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_300px]">
         <article className="min-w-0 overflow-y-auto rounded-md border border-line bg-panel shadow-subtle">
-          <div className="relative h-52 overflow-hidden rounded-t-md bg-[linear-gradient(135deg,#f4d35e_0%,#74c69d_46%,#4cc9f0_100%)]">
-            <div className="absolute inset-0 bg-gradient-to-t from-panel via-panel/45 to-transparent" />
-          </div>
-
           <div className="p-6 sm:p-8">
             {post ? (
               <>
@@ -110,9 +110,21 @@ export default function MyPostDetailPage() {
                 <h1 className="mt-5 break-words text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
                   {post.title?.trim() || "未命名帖子"}
                 </h1>
-                <p className="mt-4 break-all text-xs text-muted">
-                  作者 {post.nickname || post.userUuid}
-                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted">
+                  <span className="break-all">作者 {post.nickname || post.userUuid}</span>
+                  <span>图片 {post.mediaList?.length ?? 0}</span>
+                </div>
+                {hasMedia ? (
+                  <PostMediaCarousel mediaList={post.mediaList} title={post.title} />
+                ) : (
+                  <div className="mt-8 overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
+                    <PostCover
+                      title={post.title}
+                      className="aspect-[16/9]"
+                      fallbackClassName="bg-[linear-gradient(135deg,#f4d35e_0%,#74c69d_46%,#4cc9f0_100%)]"
+                    />
+                  </div>
+                )}
                 <div className="mt-6 border-t border-line pt-5">
                   <SocialActions
                     postId={post.id}
@@ -127,7 +139,7 @@ export default function MyPostDetailPage() {
                     commentCount={commentCount}
                   />
                 </div>
-                <PostContent content={post.content} />
+                <PostContent content={post.content} hiddenImageUrls={hiddenImageUrls} />
                 <CommentPanel
                   postId={post.id}
                   currentUserUuid={user?.uuid}
@@ -165,6 +177,11 @@ export default function MyPostDetailPage() {
               {post?.visibility === 2
                 ? "这篇帖子仅当前账号可见。"
                 : "这篇帖子会出现在公开内容流。"}
+            </p>
+            <p className="mt-3 text-sm leading-7 text-muted">
+              {hasMedia
+                ? "图片轮播按接口返回的 `sortOrder` 排序展示。"
+                : "当前帖子没有图片，顶部保持默认展示样式。"}
             </p>
           </div>
         </aside>

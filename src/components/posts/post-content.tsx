@@ -42,8 +42,15 @@ function parseContent(content: string) {
   return parts;
 }
 
-export function PostContent({ content }: { content: string }) {
+export function PostContent({
+  content,
+  hiddenImageUrls = [],
+}: {
+  content: string;
+  hiddenImageUrls?: string[];
+}) {
   const parts = parseContent(content);
+  const hiddenImageUrlSet = new Set(hiddenImageUrls.map((url) => url.trim()));
 
   return (
     <div className="mt-8 border-t border-line pt-8 text-base leading-8 text-foreground">
@@ -52,7 +59,7 @@ export function PostContent({ content }: { content: string }) {
           <div key={index} className="whitespace-pre-wrap break-words">
             {part.value}
           </div>
-        ) : (
+        ) : hiddenImageUrlSet.has(part.url.trim()) ? null : (
           <figure key={index} className="my-5 overflow-hidden rounded-md border border-line bg-soft">
             <img
               src={part.url}

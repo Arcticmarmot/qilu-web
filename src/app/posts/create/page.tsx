@@ -21,14 +21,10 @@ type UploadItem = {
   name: string;
   previewUrl: string;
   status: "uploading" | "done" | "error";
+  mediaId?: number;
   error?: string;
   imageUrl?: string;
-  markdown?: string;
 };
-
-function createImageMarkdown(name: string, url: string) {
-  return `\n\n![${name.replaceAll("]", "")}](${url})`;
-}
 
 export default function NewPostPage() {
   const router = useRouter();
@@ -41,6 +37,7 @@ export default function NewPostPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const previewUrlsRef = useRef<string[]>([]);
+  const uploadQueueRef = useRef(Promise.resolve());
 
   useToastMessage(error || userError, "error");
 
@@ -65,20 +62,28 @@ export default function NewPostPage() {
     );
   };
 
-  const appendUploadedImage = (name: string, url: string) => {
-    const markdown = createImageMarkdown(name, url);
-
-    setContent((current) => {
-      const next = `${current}${markdown}`;
-      if (next.length > MAX_CONTENT_LENGTH) {
-        setError("图片链接已上传，但正文长度会超过限制，请手动精简后再插入");
-        return current;
-      }
-
-      return next;
-    });
-
-    return markdown;
+  const enqueueUpload = (file: File, id: string) => {
+    uploadQueueRef.current = uploadQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        try {
+          const result = await uploadPostImage(file);
+          updateUpload(id, {
+            status: "done",
+            mediaId: result.mediaId,
+            imageUrl: result.url,
+          });
+          notify(`${file.name} 上传成功`, "success");
+        } catch (err) {
+          updateUpload(id, {
+            status: "error",
+            error: getErrorMessage(err, "图片上传失败"),
+          });
+          if (!isAuthError(err)) {
+            setError(getErrorMessage(err, "图片上传失败"));
+          }
+        }
+      });
   };
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -111,28 +116,7 @@ export default function NewPostPage() {
         },
       ]);
 
-      void uploadPostImage(file)
-        .then((result) => {
-          const markdown = appendUploadedImage(
-            result.originalFilename || file.name,
-            result.url,
-          );
-          updateUpload(id, {
-            status: "done",
-            imageUrl: result.url,
-            markdown,
-          });
-          notify(`${file.name} 上传成功`, "success");
-        })
-        .catch((err) => {
-          updateUpload(id, {
-            status: "error",
-            error: getErrorMessage(err, "图片上传失败"),
-          });
-          if (!isAuthError(err)) {
-            setError(getErrorMessage(err, "图片上传失败"));
-          }
-        });
+      enqueueUpload(file, id);
     });
   };
 
@@ -144,10 +128,6 @@ export default function NewPostPage() {
         previewUrlsRef.current = previewUrlsRef.current.filter(
           (url) => url !== target.previewUrl,
         );
-        const markdown = target.markdown;
-        if (markdown) {
-          setContent((value) => value.replace(markdown, ""));
-        }
       }
 
       return current.filter((item) => item.id !== id);
@@ -181,10 +161,17 @@ export default function NewPostPage() {
     setIsSubmitting(true);
 
     try {
+      const mediaIds = uploads.flatMap((item) =>
+        item.status === "done" && typeof item.mediaId === "number"
+          ? [item.mediaId]
+          : [],
+      );
+
       const postId = await createPost({
         title: trimmedTitle || undefined,
         content: trimmedContent,
         visibility,
+        mediaIds,
       });
       notify("发布成功", "success");
       router.replace(postId ? `/posts/me/${postId}` : "/posts/me");
@@ -289,7 +276,7 @@ export default function NewPostPage() {
                     选择图片上传
                   </span>
                   <span className="mt-2 text-xs leading-5 text-muted">
-                    可一次选择多张，上传成功后会自动插入正文
+                    可一次选择多张，上传成功后会作为帖子图片提交
                   </span>
                   <input
                     id="post-images"
@@ -341,7 +328,7 @@ export default function NewPostPage() {
                             {item.status === "uploading"
                               ? "上传中"
                               : item.status === "done"
-                                ? "已插入正文"
+                                ? "已上传"
                                 : item.error || "上传失败"}
                           </p>
                         </div>

@@ -7,6 +7,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { AppHeader, PageLoading } from "@/components/product-shell";
 import { SocialActions } from "@/components/posts/post-actions";
+import { getPostCoverUrl, PostCover } from "@/components/posts/post-media";
 import {
   formatDate,
   getPageItems,
@@ -70,46 +71,41 @@ function PostCard({
   onLikeError: (message: string) => void;
   onLikeSuccess: (message: string) => void;
 }) {
-  const palette = [
-    "from-[#f4d35e] via-[#74c69d] to-[#4cc9f0]",
-    "from-[#4cc9f0] via-[#74c69d] to-[#f0eee7]",
-    "from-[#f0eee7] via-[#f4d35e] to-[#74c69d]",
-    "from-[#74c69d] via-[#4cc9f0] to-[#f4d35e]",
+  const fallbackPalette = [
+    "bg-[linear-gradient(135deg,#f4d35e_0%,#74c69d_46%,#4cc9f0_100%)]",
+    "bg-[linear-gradient(135deg,#4cc9f0_0%,#74c69d_48%,#f0eee7_100%)]",
+    "bg-[linear-gradient(135deg,#f0eee7_0%,#f4d35e_45%,#74c69d_100%)]",
+    "bg-[linear-gradient(135deg,#74c69d_0%,#4cc9f0_52%,#f4d35e_100%)]",
   ];
-  const blockHeights = ["min-h-[11rem]", "min-h-[12.5rem]", "min-h-[14rem]", "min-h-[12rem]"];
-  const previewLines = ["line-clamp-2", "line-clamp-3", "line-clamp-4"];
-  const size = blockHeights[index % blockHeights.length];
   const preview = post.contentSnippet?.trim() || "暂无内容预览";
-  const previewLine = previewLines[(post.id + index) % previewLines.length];
-  const bannerHeights = ["h-14", "h-16", "h-20"];
-  const bannerHeight = bannerHeights[(post.id + index) % bannerHeights.length];
+  const previewLine = index % 2 === 0 ? "line-clamp-3" : "line-clamp-4";
+  const coverUrl = getPostCoverUrl(post);
 
   return (
     <article
-      className={cx(
-        "group flex break-inside-avoid flex-col overflow-hidden rounded-md border border-line bg-panel shadow-subtle transition hover:-translate-y-1 hover:border-accent",
-        size,
-      )}
+      className="group flex h-full flex-col overflow-hidden rounded-md border border-line bg-panel shadow-subtle transition hover:-translate-y-1 hover:border-accent"
     >
       <Link href={`/posts/${post.id}`} className="block">
-        <div className={cx("bg-gradient-to-br", bannerHeight, palette[index % palette.length])}>
-          <div className="flex h-full items-end justify-end bg-background/10 p-3">
-            <span className="rounded-md bg-background/72 px-3 py-1 text-xs text-accent backdrop-blur">
-              公开
-            </span>
-          </div>
-        </div>
+        <PostCover
+          coverUrl={coverUrl}
+          title={post.title}
+          badge="公开"
+          className="aspect-[16/10]"
+          imageClassName="transition duration-500 group-hover:scale-105"
+          fallbackClassName={fallbackPalette[index % fallbackPalette.length]}
+          priority={index < 3}
+        />
       </Link>
-      <article className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-4">
         <Link href={`/posts/${post.id}`} className="block">
-          <h2 className="line-clamp-3 break-words text-base font-semibold leading-6 text-foreground group-hover:text-accent-strong">
+          <h2 className="line-clamp-2 break-words text-lg font-semibold leading-7 text-foreground group-hover:text-accent-strong">
             {post.title?.trim() || "未命名帖子"}
           </h2>
-          <p className={cx("mt-2 break-words text-sm leading-6 text-muted", previewLine)}>
+          <p className={cx("mt-3 break-words text-sm leading-6 text-muted", previewLine)}>
             {preview}
           </p>
         </Link>
-        <div className="mt-auto grid gap-2 border-t border-line pt-3 text-xs text-muted">
+        <div className="mt-5 grid gap-2 border-t border-line pt-4 text-xs text-muted">
           <div className="flex items-center justify-between gap-3">
             <span>发布人</span>
             <span className="min-w-0 max-w-44 truncate text-right text-foreground">
@@ -136,7 +132,7 @@ function PostCard({
             />
           </div>
         </div>
-      </article>
+      </div>
     </article>
   );
 }
@@ -387,7 +383,7 @@ function HomeContent() {
               </div>
             ) : visiblePosts.length ? (
               <>
-                <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 [&>*]:mb-4">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {visiblePosts.map((post, index) => (
                     <PostCard
                       key={post.id}

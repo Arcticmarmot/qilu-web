@@ -14,6 +14,7 @@ export type Post = {
   userUuid: string;
   nickname?: string;
   title?: string;
+  mediaList?: PostMedia[];
   content: string;
   visibility?: 1 | 2;
   likeCount?: number;
@@ -27,6 +28,7 @@ export type PostListItem = {
   userUuid: string;
   nickname: string;
   title?: string;
+  coverUrl?: string;
   contentSnippet?: string;
   contentPreview?: string;
   visibility?: 1 | 2;
@@ -34,6 +36,13 @@ export type PostListItem = {
   likedByMe: boolean;
   commentCount: number;
   createdAt: string;
+};
+
+export type PostMedia = {
+  postId?: number;
+  mediaId: number;
+  url: string;
+  sortOrder?: number;
 };
 
 export type PostComment = {
@@ -130,9 +139,11 @@ export type PostInput = {
   title?: string;
   content: string;
   visibility: 1 | 2;
+  mediaIds?: number[];
 };
 
 export type MediaUpload = {
+  mediaId: number;
   objectKey: string;
   url: string;
   originalFilename: string;
@@ -166,6 +177,22 @@ function normalizePostListItem<T extends PostListItem>(value: T) {
   return {
     ...normalizeLikedState(value),
     contentSnippet: value.contentSnippet ?? value.contentPreview ?? "",
+  };
+}
+
+function normalizePost<T extends Post>(value: T) {
+  return {
+    ...normalizeLikedState(value),
+    mediaList: [...(value.mediaList ?? [])].sort((left, right) => {
+      const leftOrder = left.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder = right.sortOrder ?? Number.MAX_SAFE_INTEGER;
+
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return left.mediaId - right.mediaId;
+    }),
   };
 }
 
@@ -249,11 +276,11 @@ export function getMyPostPage(input: { current?: number; size?: number } = {}) {
 }
 
 export function getPost(postId: number | string) {
-  return request<Post>(`/posts/${postId}`);
+  return request<Post>(`/posts/${postId}`).then((post) => normalizePost(post));
 }
 
 export function getMyPost(postId: number | string) {
-  return request<Post>(`/posts/me/${postId}`);
+  return request<Post>(`/posts/me/${postId}`).then((post) => normalizePost(post));
 }
 
 export function likePost(postId: number | string) {
