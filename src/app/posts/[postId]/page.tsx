@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AppHeader, PageLoading } from "@/components/product-shell";
+import { BranchPostForm } from "@/components/posts/branch-post-form";
 import { CommentPanel } from "@/components/posts/comment-panel";
 import { PostContent } from "@/components/posts/post-content";
 import { PostCover, PostMediaCarousel } from "@/components/posts/post-media";
@@ -60,6 +61,9 @@ export default function PostDetailPage() {
 
   const hiddenImageUrls = post?.mediaList?.flatMap((item) => (item.url ? [item.url] : [])) ?? [];
   const hasMedia = Boolean(post?.mediaList?.length);
+  const canCreateBranch =
+    Boolean(post) &&
+    (post?.parentId == null || post?.rootId == null || post?.rootId === post?.id);
 
   if (isUserLoading || isLoadingPost) {
     return <PageLoading />;
@@ -128,6 +132,24 @@ export default function PostDetailPage() {
         </article>
 
         <aside className="space-y-4 overflow-y-auto pr-1">
+          {post && canCreateBranch ? (
+            <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
+              <p className="text-xs tracking-[0.24em] text-muted">创建分支</p>
+              <p className="mt-3 text-sm leading-7 text-muted">
+                用当前帖子作为根节点，直接提交一个新的分支帖子，便于测试
+                `POST /posts/{post.id}/branches`。
+              </p>
+              <div className="mt-4">
+                <BranchPostForm
+                  parentPostId={post.id}
+                  parentTitle={post.title}
+                  onError={setError}
+                  onCreated={() => void loadPost()}
+                />
+              </div>
+            </div>
+          ) : null}
+
           <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
             <p className="text-xs tracking-[0.24em] text-muted">公开浏览</p>
             <div className="mt-5 grid gap-3">

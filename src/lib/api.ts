@@ -14,6 +14,9 @@ export type Post = {
   userUuid: string;
   nickname?: string;
   title?: string;
+  branchPrompt?: string;
+  parentId?: number | null;
+  rootId?: number | null;
   mediaList?: PostMedia[];
   content: string;
   visibility?: 1 | 2;
@@ -142,6 +145,14 @@ export type PostInput = {
   mediaIds?: number[];
 };
 
+export type BranchPostInput = {
+  branchPrompt?: string;
+  title?: string;
+  content: string;
+  visibility: 1 | 2;
+  mediaIds?: number[];
+};
+
 export type MediaUpload = {
   mediaId: number;
   objectKey: string;
@@ -203,6 +214,16 @@ export async function createPost(input: PostInput) {
   });
 
   return normalizePostId(data);
+}
+
+export function createBranchPost(
+  postId: number | string,
+  input: BranchPostInput,
+) {
+  return request<null>(`/posts/${postId}/branches`, {
+    method: "POST",
+    body: input,
+  });
 }
 
 export function uploadPostImage(file: File) {
