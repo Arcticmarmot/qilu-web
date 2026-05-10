@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { AppHeader, PageLoading } from "@/components/product-shell";
 import { BranchPostForm } from "@/components/posts/branch-post-form";
-import { formatDate, getPostTime } from "@/components/posts/post-utils";
+import { selectMyPostDetail } from "@/components/posts/my-post-detail-cache";
 import { useToastMessage } from "@/components/ui/toast";
-import { getMyPost, type Post } from "@/lib/api";
-import { getErrorMessage, isAuthError } from "@/lib/error";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 function getParam(value: string | string[] | undefined) {
@@ -20,50 +18,22 @@ export default function CreateBranchPostPage() {
   const params = useParams();
   const postId = getParam(params.postId);
   const { error: userError, isLoading: isUserLoading } = useCurrentUser();
-  const [parentPost, setParentPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
-  const [parentNotice, setParentNotice] = useState("");
-  const [isLoadingPost, setIsLoadingPost] = useState(true);
 
   useToastMessage(error || userError, "error");
 
-  const loadPost = useCallback(async () => {
-    if (!postId) {
-      setError("帖子不存在");
-      setIsLoadingPost(false);
-      return;
-    }
+  const returnHref = useMemo(() => {
+    const selected = selectMyPostDetail(postId);
+    const parentPost = selected?.post;
+    const rootId =
+      parentPost?.rootId ??
+      selected?.posts.find((post) => post.parentId == null)?.id ??
+      parentPost?.id;
 
-    setIsLoadingPost(true);
-    setError("");
-    setParentNotice("");
-
-    try {
-      const result = await getMyPost(postId);
-      if (!result) {
-        setParentNotice("父帖子详情暂时不可用，但仍可按当前父帖子 ID 创建分支。");
-        return;
-      }
-
-      setParentPost(result);
-    } catch (err) {
-      if (!isAuthError(err)) {
-        setParentNotice(
-          getErrorMessage(err, "父帖子详情暂时不可用，但仍可按当前父帖子 ID 创建分支。"),
-        );
-      }
-    } finally {
-      setIsLoadingPost(false);
-    }
+    return rootId ? `/posts/me/${rootId}` : "/profile?tab=posts";
   }, [postId]);
 
-  useEffect(() => {
-    if (!isUserLoading) {
-      void loadPost();
-    }
-  }, [isUserLoading, loadPost]);
-
-  if (isUserLoading || isLoadingPost) {
+  if (isUserLoading) {
     return <PageLoading />;
   }
 
@@ -81,50 +51,34 @@ export default function CreateBranchPostPage() {
             分支会挂在当前父帖子下面，提交后回到我的帖子详情页查看分支路径。
           </p>
 
-          {parentNotice ? (
-            <p className="mt-4 rounded-md border border-line bg-soft p-3 text-sm leading-6 text-muted">
-              {parentNotice}
-            </p>
-          ) : null}
-
           {postId ? (
             <div className="mt-5 max-w-2xl">
               <BranchPostForm
                 parentPostId={postId}
-                parentTitle={parentPost?.title}
                 onError={setError}
-                onCreated={() =>
-                  router.replace(
-                    parentPost
-                      ? `/posts/me/${parentPost.rootId ?? parentPost.id}`
-                      : "/profile?tab=posts",
-                  )
-                }
+                onCreated={() => router.replace(returnHref)}
               />
             </div>
           ) : (
-            <p className="mt-5 text-sm text-muted">父帖子 ID 缺失。</p>
+            <p className="mt-5 text-sm text-muted">父节点缺失。</p>
           )}
         </section>
 
         <aside className="space-y-4 overflow-y-auto pr-1">
           <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
-            <p className="text-xs tracking-[0.24em] text-muted">父帖子</p>
-            <h2 className="mt-3 break-words text-lg font-semibold leading-7">
-              {parentPost?.title?.trim() || "未命名帖子"}
-            </h2>
+            <p className="text-xs tracking-[0.24em] text-muted">创建规则</p>
             <div className="mt-4 grid gap-2 text-sm text-muted">
-              <p>父帖子 ID：{postId || "-"}</p>
-              <p>创建时间：{parentPost ? formatDate(getPostTime(parentPost)) : "-"}</p>
-              <p>父分支：{parentPost?.branchPrompt?.trim() || "根帖子"}</p>
+              <p>分支会使用当前路径中的父节点 ID 提交。</p>
+              <p>创建分支不提交可见性。</p>
+              <p>可继续上传图片，提交前需等待图片上传完成。</p>
             </div>
           </div>
 
           <Link
-            href={parentPost ? `/posts/me/${parentPost.rootId ?? parentPost.id}` : "/profile?tab=posts"}
+            href={returnHref}
             className="inline-flex h-10 w-full items-center justify-center rounded-md border border-line px-4 text-sm text-foreground transition hover:border-accent hover:text-accent"
           >
-            {parentPost ? "返回父帖子" : "返回我的帖子"}
+            返回
           </Link>
         </aside>
       </div>

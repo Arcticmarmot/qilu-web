@@ -153,8 +153,9 @@ export function getCurrentUser() {
 
 export type PostInput = {
   title?: string;
+  branchPrompt?: string;
   content: string;
-  visibility: 1 | 2;
+  visibility?: 1 | 2;
   mediaIds?: number[];
 };
 
@@ -162,8 +163,12 @@ export type BranchPostInput = {
   branchPrompt?: string;
   title?: string;
   content: string;
-  visibility: 1 | 2;
   mediaIds?: number[];
+};
+
+export type PostParentUpdateInput = {
+  parentId?: number | null;
+  branchPrompt?: string;
 };
 
 export type MediaUpload = {
@@ -397,6 +402,16 @@ export function unlikePost(postId: number | string) {
 
 export function updatePost(postId: number | string, input: PostInput) {
   return request<null>(`/posts/${postId}`, {
+    method: "PUT",
+    body: input,
+  });
+}
+
+export function updatePostParent(
+  postId: number | string,
+  input: PostParentUpdateInput,
+) {
+  return request<null>(`/posts/${postId}/parent`, {
     method: "PUT",
     body: input,
   });

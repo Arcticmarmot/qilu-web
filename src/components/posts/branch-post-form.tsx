@@ -24,14 +24,12 @@ type UploadItem = {
 
 type BranchPostFormProps = {
   parentPostId: number | string;
-  parentTitle?: string;
   onError: (message: string) => void;
   onCreated?: () => void;
 };
 
 export function BranchPostForm({
   parentPostId,
-  parentTitle,
   onError,
   onCreated,
 }: BranchPostFormProps) {
@@ -39,7 +37,6 @@ export function BranchPostForm({
   const [branchPrompt, setBranchPrompt] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [visibility, setVisibility] = useState<1 | 2>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const previewUrlsRef = useRef<string[]>([]);
@@ -149,7 +146,6 @@ export function BranchPostForm({
     setBranchPrompt("");
     setTitle("");
     setContent("");
-    setVisibility(1);
     clearUploads();
   };
 
@@ -195,7 +191,6 @@ export function BranchPostForm({
         branchPrompt: trimmedBranchPrompt || undefined,
         title: trimmedTitle || undefined,
         content: trimmedContent,
-        visibility,
         mediaIds,
       });
       resetForm();
@@ -212,13 +207,6 @@ export function BranchPostForm({
 
   return (
     <form className="grid gap-4" onSubmit={handleSubmit}>
-      <div className="rounded-md border border-line bg-soft p-3 text-xs leading-6 text-muted">
-        <p>父帖子 ID：{parentPostId}</p>
-        <p className="mt-1 break-words">
-          父帖子标题：{parentTitle?.trim() || "未命名帖子"}
-        </p>
-      </div>
-
       <Input
         label="分支对话"
         value={branchPrompt}
@@ -234,30 +222,6 @@ export function BranchPostForm({
         maxLength={MAX_TITLE_LENGTH}
         placeholder="给分支起个名字"
       />
-
-      <div>
-        <span className="mb-2 block text-sm font-medium text-foreground">可见性</span>
-        <div className="grid gap-3">
-          {[
-            { value: 1 as const, label: "公开", description: "进入公开内容流" },
-            { value: 2 as const, label: "私密", description: "仅自己可见" },
-          ].map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              className={`rounded-md border p-3 text-left transition ${
-                visibility === item.value
-                  ? "border-accent bg-soft text-foreground"
-                  : "border-line bg-transparent text-muted hover:border-accent"
-              }`}
-              onClick={() => setVisibility(item.value)}
-            >
-              <span className="block text-sm font-medium">{item.label}</span>
-              <span className="mt-1 block text-xs">{item.description}</span>
-            </button>
-          ))}
-        </div>
-      </div>
 
       <label className="block" htmlFor={`branch-content-${parentPostId}`}>
         <span className="mb-2 block text-sm font-medium text-foreground">内容</span>

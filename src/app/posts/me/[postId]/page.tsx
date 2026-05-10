@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader, PageLoading } from "@/components/product-shell";
 import { CommentPanel } from "@/components/posts/comment-panel";
+import { cacheMyPostDetail } from "@/components/posts/my-post-detail-cache";
 import { PostContent } from "@/components/posts/post-content";
 import { PostCover, PostMediaCarousel } from "@/components/posts/post-media";
 import { ManagementActions, SocialActions } from "@/components/posts/post-actions";
@@ -27,10 +28,22 @@ function getParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function getNumericParam(value: string | string[] | undefined | null) {
+  const parsed = Number(Array.isArray(value) ? value[0] : value);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return null;
+  }
+
+  return Math.floor(parsed);
+}
+
 export default function MyPostDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const postId = getParam(params.postId);
+  const selectedPostId = getNumericParam(searchParams.get("selectedPostId"));
   const { user, error: userError, isLoading: isUserLoading } = useCurrentUser();
   const notify = useToast();
   const articleRef = useRef<HTMLElement | null>(null);
@@ -56,8 +69,14 @@ export default function MyPostDetailPage() {
     try {
       const result = await getMyPostDetailList(postId);
       const rootPost = getRootPost(result, postId);
+      const requestedPostId = getNumericParam(postId);
+      const preferredPost =
+        result.find((item) => item.id === selectedPostId) ??
+        result.find((item) => item.id === requestedPostId) ??
+        rootPost;
+      cacheMyPostDetail(result);
       setPosts(result);
-      setCurrentPostId(rootPost?.id ?? null);
+      setCurrentPostId(preferredPost?.id ?? null);
     } catch (err) {
       if (!isAuthError(err)) {
         setError(getErrorMessage(err, "帖子加载失败"));
@@ -65,7 +84,7 @@ export default function MyPostDetailPage() {
     } finally {
       setIsLoadingPost(false);
     }
-  }, [postId]);
+  }, [postId, selectedPostId]);
 
   useEffect(() => {
     if (!isUserLoading) {
@@ -210,6 +229,14 @@ export default function MyPostDetailPage() {
                 className="inline-flex h-9 items-center justify-center rounded-md bg-foreground px-3 text-sm font-medium text-background transition hover:bg-accent-strong"
               >
                 创建分支
+              </Link>
+            ) : null}
+            {post ? (
+              <Link
+                href={`/posts/me/tree?postId=${post.id}`}
+                className="inline-flex h-9 items-center justify-center rounded-md border border-line px-3 text-sm text-foreground transition hover:border-accent hover:text-accent"
+              >
+                调整结构
               </Link>
             ) : null}
             <Link

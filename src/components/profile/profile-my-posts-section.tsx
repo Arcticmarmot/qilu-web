@@ -145,6 +145,30 @@ function MyPostCard({
                   <path d="M6 21V9" />
                 </svg>
               </Link>
+              <Link
+                href={`/posts/me/tree?postId=${post.id}`}
+                className="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-line px-2 text-sm text-muted transition hover:border-accent hover:text-accent"
+                title="调整结构"
+                aria-label="调整结构"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 3v6" />
+                  <path d="M7 9h10" />
+                  <path d="M7 9v5" />
+                  <path d="M17 9v5" />
+                  <path d="M5 14h4v4H5z" />
+                  <path d="M15 14h4v4h-4z" />
+                </svg>
+              </Link>
               <ManagementActions
                 postId={post.id}
                 deleting={deletingId === post.id}
@@ -324,6 +348,12 @@ export function ProfileMyPostsSection() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Link
+            href="/posts/me/tree"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-line px-4 text-sm text-foreground transition hover:border-accent hover:text-accent"
+          >
+            树结构管理
+          </Link>
           <Link
             href="/posts/create"
             className="inline-flex h-10 items-center justify-center rounded-md bg-foreground px-4 text-sm font-medium text-background transition hover:bg-accent-strong"
