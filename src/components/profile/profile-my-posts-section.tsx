@@ -124,6 +124,27 @@ function MyPostCard({
                   <path d="M4 19h10" />
                 </svg>
               </Link>
+              <Link
+                href={`/posts/me/${post.id}/branch`}
+                className="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-line px-2 text-sm text-muted transition hover:border-accent hover:text-accent"
+                title="创建分支"
+                aria-label="创建分支"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M6 3v6a3 3 0 0 0 3 3h6" />
+                  <path d="M18 9 15 12l3 3" />
+                  <path d="M6 21V9" />
+                </svg>
+              </Link>
               <ManagementActions
                 postId={post.id}
                 deleting={deletingId === post.id}

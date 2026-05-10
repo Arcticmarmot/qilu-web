@@ -48,6 +48,11 @@ export default function EditPostPage() {
 
     try {
       const result = await getMyPost(postId);
+      if (!result) {
+        setError("帖子不存在");
+        return;
+      }
+
       setTitle(result.title ?? "");
       setContent(result.content);
       setVisibility(result.visibility === 2 ? 2 : 1);

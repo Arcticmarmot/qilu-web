@@ -115,7 +115,6 @@ export function PostMediaCarousel({
   }
 
   const safeActiveIndex = Math.min(activeIndex, orderedMedia.length - 1);
-  const activeMedia = orderedMedia[safeActiveIndex];
   const canNavigate = orderedMedia.length > 1;
 
   const moveTo = (nextIndex: number) => {
@@ -174,12 +173,9 @@ export function PostMediaCarousel({
             </>
           ) : null}
 
-          <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+          <div className="absolute bottom-4 left-4">
             <div className="rounded-md border border-white/12 bg-background/72 px-3 py-2 text-xs text-foreground backdrop-blur">
               {safeActiveIndex + 1} / {orderedMedia.length}
-            </div>
-            <div className="max-w-[65%] rounded-md border border-white/12 bg-background/72 px-3 py-2 text-xs text-muted backdrop-blur">
-              排序 {activeMedia.sortOrder ?? safeActiveIndex + 1}
             </div>
           </div>
         </div>

@@ -26,6 +26,19 @@ export type Post = {
   createAt?: string;
 };
 
+type RawPost = Post & {
+  branch_prompt?: string;
+  parent_id?: number | string | null;
+  root_id?: number | string | null;
+  media_list?: RawPostMedia[];
+  likeByMe?: boolean;
+};
+
+type RawPostMedia = PostMedia & {
+  media_id?: number;
+  sort_order?: number;
+};
+
 export type PostListItem = {
   id: number;
   userUuid: string;
@@ -177,6 +190,14 @@ function normalizePostId(value: unknown) {
   return null;
 }
 
+function normalizeOptionalPostId(value: unknown) {
+  if (value == null) {
+    return null;
+  }
+
+  return normalizePostId(value);
+}
+
 function normalizeLikedState<T extends LikeStatePayload>(value: T) {
   return {
     ...value,
@@ -191,10 +212,24 @@ function normalizePostListItem<T extends PostListItem>(value: T) {
   };
 }
 
+function normalizePostMedia(value: RawPostMedia): PostMedia {
+  return {
+    ...value,
+    mediaId: value.mediaId ?? value.media_id ?? 0,
+    sortOrder: value.sortOrder ?? value.sort_order,
+  };
+}
+
 function normalizePost<T extends Post>(value: T) {
+  const raw = value as RawPost;
+  const mediaList = raw.mediaList ?? raw.media_list ?? [];
+
   return {
     ...normalizeLikedState(value),
-    mediaList: [...(value.mediaList ?? [])].sort((left, right) => {
+    branchPrompt: raw.branchPrompt ?? raw.branch_prompt,
+    parentId: normalizeOptionalPostId(raw.parentId ?? raw.parent_id),
+    rootId: normalizeOptionalPostId(raw.rootId ?? raw.root_id),
+    mediaList: mediaList.map((item) => normalizePostMedia(item)).sort((left, right) => {
       const leftOrder = left.sortOrder ?? Number.MAX_SAFE_INTEGER;
       const rightOrder = right.sortOrder ?? Number.MAX_SAFE_INTEGER;
 
@@ -205,6 +240,38 @@ function normalizePost<T extends Post>(value: T) {
       return left.mediaId - right.mediaId;
     }),
   };
+}
+
+function normalizePostDetailList(value: Post | Post[]) {
+  const posts = Array.isArray(value) ? value : [value];
+
+  return posts.map((post) => normalizePost(post));
+}
+
+export function getRootPost(posts: Post[], requestedPostId?: number | string) {
+  const requestedId = normalizePostId(requestedPostId);
+
+  return (
+    posts.find(
+      (post) =>
+        post.parentId == null &&
+        post.rootId != null &&
+        post.id === post.rootId,
+    ) ??
+    posts.find((post) => post.parentId == null) ??
+    posts.find((post) => requestedId != null && post.id === requestedId) ??
+    posts[0] ??
+    null
+  );
+}
+
+function getRequestedPost(posts: Post[], requestedPostId: number | string) {
+  const requestedId = normalizePostId(requestedPostId);
+
+  return (
+    posts.find((post) => requestedId != null && post.id === requestedId) ??
+    getRootPost(posts, requestedPostId)
+  );
 }
 
 export async function createPost(input: PostInput) {
@@ -296,12 +363,24 @@ export function getMyPostPage(input: { current?: number; size?: number } = {}) {
   }));
 }
 
+export function getPostDetailList(postId: number | string) {
+  return request<Post | Post[]>(`/posts/${postId}`).then((post) =>
+    normalizePostDetailList(post),
+  );
+}
+
+export function getMyPostDetailList(postId: number | string) {
+  return request<Post | Post[]>(`/posts/me/${postId}`).then((post) =>
+    normalizePostDetailList(post),
+  );
+}
+
 export function getPost(postId: number | string) {
-  return request<Post>(`/posts/${postId}`).then((post) => normalizePost(post));
+  return getPostDetailList(postId).then((posts) => getRequestedPost(posts, postId));
 }
 
 export function getMyPost(postId: number | string) {
-  return request<Post>(`/posts/me/${postId}`).then((post) => normalizePost(post));
+  return getMyPostDetailList(postId).then((posts) => getRequestedPost(posts, postId));
 }
 
 export function likePost(postId: number | string) {

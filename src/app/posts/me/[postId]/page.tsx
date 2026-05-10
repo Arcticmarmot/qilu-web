@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader, PageLoading } from "@/components/product-shell";
 import { CommentPanel } from "@/components/posts/comment-panel";
 import { PostContent } from "@/components/posts/post-content";
@@ -14,7 +14,12 @@ import {
   getVisibilityLabel,
 } from "@/components/posts/post-utils";
 import { useToast, useToastMessage } from "@/components/ui/toast";
-import { deletePost, getMyPost, type Post } from "@/lib/api";
+import {
+  deletePost,
+  getMyPostDetailList,
+  getRootPost,
+  type Post,
+} from "@/lib/api";
 import { getErrorMessage, isAuthError } from "@/lib/error";
 import { useCurrentUser } from "@/lib/use-current-user";
 
@@ -28,7 +33,9 @@ export default function MyPostDetailPage() {
   const postId = getParam(params.postId);
   const { user, error: userError, isLoading: isUserLoading } = useCurrentUser();
   const notify = useToast();
-  const [post, setPost] = useState<Post | null>(null);
+  const articleRef = useRef<HTMLElement | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [currentPostId, setCurrentPostId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [isLoadingPost, setIsLoadingPost] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -47,8 +54,10 @@ export default function MyPostDetailPage() {
     setError("");
 
     try {
-      const result = await getMyPost(postId);
-      setPost(result);
+      const result = await getMyPostDetailList(postId);
+      const rootPost = getRootPost(result, postId);
+      setPosts(result);
+      setCurrentPostId(rootPost?.id ?? null);
     } catch (err) {
       if (!isAuthError(err)) {
         setError(getErrorMessage(err, "帖子加载失败"));
@@ -64,8 +73,8 @@ export default function MyPostDetailPage() {
     }
   }, [isUserLoading, loadPost]);
 
-  const handleDelete = async () => {
-    if (!postId || !window.confirm("确认删除这篇帖子？")) {
+  const handleDelete = async (targetPostId: number | string) => {
+    if (!window.confirm("确认删除这篇帖子？")) {
       return;
     }
 
@@ -73,9 +82,13 @@ export default function MyPostDetailPage() {
     setError("");
 
     try {
-      await deletePost(postId);
+      await deletePost(targetPostId);
       notify("删除成功", "success");
-      router.replace("/profile?tab=posts");
+      if (String(targetPostId) === String(postId)) {
+        router.replace("/profile?tab=posts");
+      } else {
+        await loadPost();
+      }
     } catch (err) {
       if (!isAuthError(err)) {
         setError(getErrorMessage(err, "删除失败"));
@@ -85,8 +98,34 @@ export default function MyPostDetailPage() {
     }
   };
 
+  const post =
+    posts.find((item) => item.id === currentPostId) ??
+    getRootPost(posts, postId);
+  const parentPost = post?.parentId
+    ? posts.find((item) => item.id === post.parentId)
+    : null;
+  const childPosts = useMemo(
+    () => (post ? posts.filter((item) => item.parentId === post.id) : []),
+    [post, posts],
+  );
   const hiddenImageUrls = post?.mediaList?.flatMap((item) => (item.url ? [item.url] : [])) ?? [];
   const hasMedia = Boolean(post?.mediaList?.length);
+
+  const switchPost = (nextPostId: number) => {
+    setCurrentPostId(nextPostId);
+    setCommentCount(0);
+    articleRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const updateCurrentPost = (next: { likedByMe: boolean; likeCount: number }) => {
+    if (!post) {
+      return;
+    }
+
+    setPosts((current) =>
+      current.map((item) => (item.id === post.id ? { ...item, ...next } : item)),
+    );
+  };
 
   if (isUserLoading || isLoadingPost) {
     return <PageLoading />;
@@ -97,7 +136,10 @@ export default function MyPostDetailPage() {
       <AppHeader />
 
       <div className="mx-auto grid h-[calc(100vh-3.5rem)] max-w-6xl gap-5 overflow-hidden px-5 pb-4 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <article className="min-w-0 overflow-y-auto rounded-md border border-line bg-panel shadow-subtle">
+        <article
+          ref={articleRef}
+          className="min-w-0 overflow-y-auto rounded-md border border-line bg-panel shadow-subtle"
+        >
           <div className="p-6 sm:p-8">
             {post ? (
               <>
@@ -130,9 +172,7 @@ export default function MyPostDetailPage() {
                     postId={post.id}
                     likedByMe={Boolean(post.likedByMe)}
                     likeCount={post.likeCount ?? 0}
-                    onLikeChange={(next) =>
-                      setPost((current) => (current ? { ...current, ...next } : current))
-                    }
+                    onLikeChange={updateCurrentPost}
                     onError={setError}
                     onSuccess={(message) => notify(message, "success")}
                     commentsEnabled
@@ -141,6 +181,7 @@ export default function MyPostDetailPage() {
                 </div>
                 <PostContent content={post.content} hiddenImageUrls={hiddenImageUrls} />
                 <CommentPanel
+                  key={post.id}
                   postId={post.id}
                   currentUserUuid={user?.uuid}
                   onError={setError}
@@ -156,12 +197,20 @@ export default function MyPostDetailPage() {
 
         <aside className="space-y-4 overflow-y-auto pr-1">
           <div className="grid gap-3">
-            {postId ? (
+            {post ? (
               <ManagementActions
-                postId={postId}
+                postId={post.id}
                 deleting={isDeleting}
-                onDelete={handleDelete}
+                onDelete={() => handleDelete(post.id)}
               />
+            ) : null}
+            {post ? (
+              <Link
+                href={`/posts/me/${post.id}/branch`}
+                className="inline-flex h-9 items-center justify-center rounded-md bg-foreground px-3 text-sm font-medium text-background transition hover:bg-accent-strong"
+              >
+                创建分支
+              </Link>
             ) : null}
             <Link
               href="/profile?tab=posts"
@@ -170,6 +219,44 @@ export default function MyPostDetailPage() {
               返回我的帖子
             </Link>
           </div>
+
+          {post ? (
+            <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
+              <p className="text-xs tracking-[0.24em] text-muted">分支路径</p>
+              <p className="mt-3 break-words text-sm leading-7 text-foreground">
+                {post.branchPrompt?.trim() || "根帖子"}
+              </p>
+
+              {parentPost ? (
+                <button
+                  type="button"
+                  className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-md border border-line px-4 text-sm text-foreground transition hover:border-accent hover:text-accent"
+                  onClick={() => switchPost(parentPost.id)}
+                >
+                  返回上级帖子
+                </button>
+              ) : null}
+
+              <div className="mt-4 grid gap-3">
+                {childPosts.length ? (
+                  childPosts.map((child) => (
+                    <button
+                      key={child.id}
+                      type="button"
+                      className="rounded-md border border-line bg-soft p-3 text-left text-sm leading-6 text-foreground transition hover:border-accent hover:text-accent"
+                      onClick={() => switchPost(child.id)}
+                    >
+                      {child.branchPrompt?.trim() || child.title?.trim() || "未命名分支"}
+                    </button>
+                  ))
+                ) : (
+                  <p className="rounded-md border border-line bg-soft p-3 text-sm text-muted">
+                    当前帖子暂无子分支。
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : null}
 
           <div className="rounded-md border border-line bg-panel p-5 shadow-subtle">
             <p className="text-xs tracking-[0.24em] text-muted">可见性</p>
