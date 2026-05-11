@@ -18,6 +18,11 @@ import {
 } from "@/lib/api";
 import { cx } from "@/lib/cx";
 import { getErrorMessage, isAuthError } from "@/lib/error";
+import {
+  NOTIFICATION_CREATED_EVENT,
+  NOTIFICATION_UNREAD_CHANGED_EVENT,
+  notifyNotificationUnreadChanged,
+} from "@/lib/notification-sse";
 
 type NotificationMode = "like" | "comment" | "reply";
 
@@ -197,7 +202,7 @@ function getNotificationHref(notification: NotificationListItem, mode: Notificat
     return "/posts";
   }
 
-  return `/posts/${notification.postId}#comments`;
+  return `/posts/${notification.postI}#comments`;
 }
 
 function NotificationModeIcon({ mode }: { mode: NotificationMode }) {
@@ -491,6 +496,7 @@ export function NotificationBell({ card = false }: { card?: boolean }) {
             isRead: 1,
           })),
         }));
+        notifyNotificationUnreadChanged();
       } catch (error) {
         if (!isAuthError(error)) {
           notify(getErrorMessage(error, "通知加载失败"), "error");
@@ -506,6 +512,22 @@ export function NotificationBell({ card = false }: { card?: boolean }) {
 
   useEffect(() => {
     void loadUnreadCounts();
+  }, [loadUnreadCounts]);
+
+  useEffect(() => {
+    const handleUnreadRefresh = () => {
+      void loadUnreadCounts();
+    };
+
+    window.addEventListener(NOTIFICATION_CREATED_EVENT, handleUnreadRefresh);
+    window.addEventListener(NOTIFICATION_UNREAD_CHANGED_EVENT, handleUnreadRefresh);
+    return () => {
+      window.removeEventListener(NOTIFICATION_CREATED_EVENT, handleUnreadRefresh);
+      window.removeEventListener(
+        NOTIFICATION_UNREAD_CHANGED_EVENT,
+        handleUnreadRefresh,
+      );
+    };
   }, [loadUnreadCounts]);
 
   useEffect(() => {

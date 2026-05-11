@@ -7,7 +7,7 @@ import {
   logErrorInDev,
 } from "@/lib/error";
 
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
   "http://localhost:8080";
 const REQUEST_TIMEOUT_MS = 12000;

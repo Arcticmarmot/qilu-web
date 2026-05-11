@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthSessionHandler } from "@/components/auth/auth-session-handler";
+import { NotificationSseHandler } from "@/components/notifications/notification-sse-handler";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ToastProvider>
           <AuthSessionHandler />
+          <NotificationSseHandler />
           {children}
         </ToastProvider>
       </body>

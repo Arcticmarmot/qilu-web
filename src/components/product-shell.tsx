@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { QiluMark } from "@/components/ui/qilu-mark";
 import { clearToken } from "@/lib/auth";
+import { disconnectNotificationSse } from "@/lib/notification-sse";
 
 export function AppHeader() {
   const router = useRouter();
 
   const handleLogout = () => {
+    disconnectNotificationSse();
     clearToken();
     router.replace("/login");
   };
@@ -39,6 +42,7 @@ export function AppHeader() {
           >
             我的帖子
           </Link>
+          <NotificationBell />
           <Link
             href="/profile"
             className="hidden h-9 items-center justify-center rounded-md border border-line px-3 text-sm text-foreground transition hover:border-accent hover:text-accent sm:inline-flex"
