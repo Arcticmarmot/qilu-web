@@ -202,7 +202,7 @@ function getNotificationHref(notification: NotificationListItem, mode: Notificat
     return "/posts";
   }
 
-  return `/posts/${notification.postI}#comments`;
+  return `/posts/${notification.postId}#comments`;
 }
 
 function NotificationModeIcon({ mode }: { mode: NotificationMode }) {

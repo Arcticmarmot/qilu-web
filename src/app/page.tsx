@@ -20,6 +20,7 @@ import { useToast, useToastMessage } from "@/components/ui/toast";
 import {
   getHotPostList,
   getPostPage,
+  searchPosts,
   type PageResult,
   type PostListItem,
 } from "@/lib/api";
@@ -227,8 +228,10 @@ function HomeContent() {
   const notify = useToast();
   const current = readPage(searchParams.get("current"));
   const mode = readFeedMode(searchParams.get("mode"));
+  const keyword = (searchParams.get("keyword") ?? "").trim();
   const [page, setPage] = useState<PageResult<PostListItem> | null>(null);
   const [hotPosts, setHotPosts] = useState<PostListItem[]>([]);
+  const [searchResults, setSearchResults] = useState<PostListItem[]>([]);
   const [error, setError] = useState("");
   const [likeError, setLikeError] = useState("");
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
@@ -240,17 +243,20 @@ function HomeContent() {
     setError("");
 
     try {
-      if (mode === "hot") {
-        setHotPosts([]);
-        setPage(null);
+      setHotPosts([]);
+      setPage(null);
+      setSearchResults([]);
+
+      if (keyword) {
+        const result = await searchPosts(keyword);
+        setSearchResults(result);
+      } else if (mode === "hot") {
         const result = await getHotPostList({
           current,
           size: POST_PAGE_SIZE,
         });
         setHotPosts(result);
       } else {
-        setPage(null);
-        setHotPosts([]);
         const result = await getPostPage({ current, size: POST_PAGE_SIZE });
         setPage(result);
       }
@@ -261,7 +267,7 @@ function HomeContent() {
     } finally {
       setIsLoadingPosts(false);
     }
-  }, [current, mode]);
+  }, [current, keyword, mode]);
 
   useEffect(() => {
     if (!isUserLoading) {
@@ -274,8 +280,13 @@ function HomeContent() {
     [page?.total],
   );
   const fortune = useMemo(() => getDailyFortune(), []);
-  const visiblePosts = mode === "hot" ? hotPosts : page?.records ?? [];
-  const isHotMode = mode === "hot";
+  const isSearchMode = keyword.length > 0;
+  const isHotMode = !isSearchMode && mode === "hot";
+  const visiblePosts = isSearchMode
+    ? searchResults
+    : isHotMode
+      ? hotPosts
+      : page?.records ?? [];
 
   const handlePageChange = (nextPage: number) => {
     const boundedPage = Math.min(Math.max(1, nextPage), totalPages);
@@ -283,7 +294,7 @@ function HomeContent() {
   };
 
   const handleModeChange = (nextMode: FeedMode) => {
-    if (nextMode === mode) {
+    if (!isSearchMode && nextMode === mode) {
       return;
     }
 
@@ -294,6 +305,13 @@ function HomeContent() {
     postId: number,
     next: { likedByMe: boolean; likeCount: number },
   ) => {
+    if (isSearchMode) {
+      setSearchResults((currentPosts) =>
+        currentPosts.map((post) => (post.id === postId ? { ...post, ...next } : post)),
+      );
+      return;
+    }
+
     if (isHotMode) {
       setHotPosts((currentPosts) =>
         currentPosts.map((post) => (post.id === postId ? { ...post, ...next } : post)),
@@ -321,7 +339,7 @@ function HomeContent() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <AppHeader />
+      <AppHeader initialKeyword={keyword} />
 
       <div className="mx-auto grid max-w-7xl gap-5 px-5 pb-6 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_280px]">
         <section className="min-w-0">
@@ -329,10 +347,12 @@ function HomeContent() {
             <div>
               <p className="text-xs tracking-[0.24em] text-accent">内容流</p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                {isHotMode ? "最热帖子" : "最新发布"}
+                {isSearchMode ? "搜索结果" : isHotMode ? "最热帖子" : "最新发布"}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-                {isHotMode
+                {isSearchMode
+                  ? `正在调用搜索接口匹配“${keyword}”。`
+                  : isHotMode
                   ? "当前接入 hot-post-controller 的日榜接口，方便直接切换和验证最热帖子数据。"
                   : "浏览公开内容，点进卡片查看完整正文、发布人和创建时间。"}
               </p>
@@ -395,7 +415,7 @@ function HomeContent() {
                     />
                   ))}
                 </div>
-                {isHotMode ? null : (
+                {isSearchMode || isHotMode ? null : (
                   <Pagination
                     current={page?.current || current}
                     total={page?.total ?? 0}
@@ -405,9 +425,17 @@ function HomeContent() {
               </>
             ) : (
               <EmptyState
-                title={isHotMode ? "还没有最热帖子" : "还没有帖子"}
+                title={
+                  isSearchMode
+                    ? "没有匹配的帖子"
+                    : isHotMode
+                      ? "还没有最热帖子"
+                      : "还没有帖子"
+                }
                 description={
-                  isHotMode
+                  isSearchMode
+                    ? "换一个关键词再试试，搜索会匹配标题、分支提示和正文。"
+                    : isHotMode
                     ? "当前日榜还没有可展示的帖子，可以先发布或互动后再回来测试接口。"
                     : "发布第一篇帖子后，这里会出现公开内容流。"
                 }

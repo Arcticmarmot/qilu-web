@@ -347,6 +347,20 @@ export function getHotPostList(input: {
   );
 }
 
+export function searchPosts(keyword: string) {
+  const normalizedKeyword = keyword.trim();
+
+  if (!normalizedKeyword) {
+    return Promise.resolve([]);
+  }
+
+  const params = new URLSearchParams({ keyword: normalizedKeyword });
+
+  return request<PostListItem[]>(`/search/posts?${params.toString()}`).then((posts) =>
+    posts.map((post) => normalizePostListItem(post)),
+  );
+}
+
 export function getMyPostPage(input: { current?: number; size?: number } = {}) {
   const params = new URLSearchParams();
 
