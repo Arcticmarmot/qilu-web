@@ -8,6 +8,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { AppHeader, PageLoading } from "@/components/product-shell";
 import { SocialActions } from "@/components/posts/post-actions";
 import { getPostCoverUrl, PostCover } from "@/components/posts/post-media";
+import { CouponCenterCard } from "@/components/vouchers/coupon-center-card";
 import {
   formatDate,
   getPageItems,
@@ -446,6 +447,8 @@ function HomeContent() {
 
         <aside className="grid content-start gap-5">
           <NotificationBell card />
+
+          <CouponCenterCard />
 
           <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
             <Image

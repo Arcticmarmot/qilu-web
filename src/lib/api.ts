@@ -577,3 +577,56 @@ export function markReplyNotificationsReadAll() {
     method: "PATCH",
   });
 }
+
+export type VoucherInput = {
+  title: string;
+  description: string;
+};
+
+export type VoucherSeckillInput = {
+  voucherId: number;
+  totalStock: number;
+  startTime: string;
+  endTime: string;
+  redeemDeadline: string;
+};
+
+export type VoucherSeckillOrderResult = {
+  status: string;
+};
+
+export function seckillVoucher(seckillId: number) {
+  return request<VoucherSeckillOrderResult>(
+    `/voucher-seckills/${seckillId}/orders`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function createVoucher(input: VoucherInput) {
+  return request<unknown>("/admin/vouchers", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function createVoucherSeckill(input: VoucherSeckillInput) {
+  return request<unknown>("/admin/voucher-seckills", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function preheatVoucherSeckill(seckillId: number) {
+  return request<unknown>(`/admin/voucher-seckills/${seckillId}/preheat`, {
+    method: "POST",
+  });
+}
+
+export function redeemVoucherOrder(redeemCode: string) {
+  return request<unknown>("/admin/voucher-orders/redeem", {
+    method: "PATCH",
+    body: { redeemCode },
+  });
+}
