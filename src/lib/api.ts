@@ -591,9 +591,43 @@ export type VoucherSeckillInput = {
   redeemDeadline: string;
 };
 
+export type VoucherSeckill = {
+  seckillId: number;
+  voucherId: number;
+  title: string;
+  description?: string;
+  totalStock: number;
+  remainingStock: number;
+  startTime?: string;
+  endTime?: string;
+  status?: number;
+};
+
 export type VoucherSeckillOrderResult = {
   status: string;
+  orderNo?: string;
 };
+
+export type VoucherOrder = {
+  orderNo: string;
+  voucherId: number;
+  seckillId: number;
+  title: string;
+  description?: string;
+  redeemCode?: string;
+  status: 1 | 2 | 3 | 4 | number;
+  expireAt?: string;
+  usedAt?: string;
+  createdAt?: string;
+};
+
+export function getVoucherSeckills() {
+  return request<VoucherSeckill[]>("/voucher-seckills");
+}
+
+export function getVoucherSeckillDetail(seckillId: number | string) {
+  return request<VoucherSeckill>(`/voucher-seckills/${seckillId}`);
+}
 
 export function seckillVoucher(seckillId: number) {
   return request<VoucherSeckillOrderResult>(
@@ -601,6 +635,22 @@ export function seckillVoucher(seckillId: number) {
     {
       method: "POST",
     },
+  );
+}
+
+export function getSeckillOrderResult(seckillId: number | string) {
+  return request<VoucherSeckillOrderResult>(
+    `/voucher-seckills/${seckillId}/orders/result`,
+  );
+}
+
+export function getMyVoucherOrders() {
+  return request<VoucherOrder[]>("/voucher-orders/me");
+}
+
+export function getVoucherOrderDetail(orderNo: string) {
+  return request<VoucherOrder>(
+    `/voucher-orders/${encodeURIComponent(orderNo)}`,
   );
 }
 

@@ -24,7 +24,7 @@ const VOUCHER_DESCRIPTION_MAX_LENGTH = 512;
 const REDEEM_CODE_MAX_LENGTH = 64;
 
 const actionItems: Array<{ key: AdminAction; label: string; summary: string }> = [
-  { key: "voucher", label: "创建兑换券", summary: "POST /admin/vouchers" },
+  { key: "voucher", label: "创建优惠券", summary: "POST /admin/vouchers" },
   { key: "seckill", label: "创建秒杀活动", summary: "POST /admin/voucher-seckills" },
   {
     key: "preheat",
@@ -190,8 +190,8 @@ function VoucherAdminPageContent() {
         await createVoucher({ title, description });
         setVoucherForm({ title: "", description: "" });
       },
-      "兑换券创建成功",
-      "兑换券创建失败",
+      "优惠券创建成功",
+      "优惠券创建失败",
     );
   };
 
@@ -202,7 +202,7 @@ function VoucherAdminPageContent() {
     let totalStock: number;
 
     try {
-      voucherId = toPositiveInteger(seckillForm.voucherId, "兑换券 ID");
+      voucherId = toPositiveInteger(seckillForm.voucherId, "优惠券 ID");
       totalStock = toPositiveInteger(seckillForm.totalStock, "活动库存");
       validateSeckillTime(
         seckillForm.startTime,
@@ -299,10 +299,10 @@ function VoucherAdminPageContent() {
             <div>
               <p className="text-sm tracking-[0.24em] text-muted">优惠券管理</p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-                兑换券后台
+                优惠券后台
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
-                创建兑换券、配置秒杀库存，并处理线下兑换码核销。
+                创建优惠券、配置秒杀库存，并处理线下兑换码核销。
               </p>
             </div>
             <Link
@@ -388,7 +388,7 @@ function VoucherAdminPageContent() {
                       }))
                     }
                     maxLength={VOUCHER_TITLE_MAX_LENGTH}
-                    placeholder="登山杖兑换券"
+                    placeholder="登山杖优惠券"
                     disabled={isSubmitting}
                   />
                   <FieldArea
@@ -409,7 +409,7 @@ function VoucherAdminPageContent() {
                       {VOUCHER_DESCRIPTION_MAX_LENGTH}
                     </div>
                     <Button type="submit" disabled={isSubmitting}>
-                      {pendingAction === "voucher" ? "创建中" : "创建兑换券"}
+                      {pendingAction === "voucher" ? "创建中" : "创建优惠券"}
                     </Button>
                   </div>
                 </form>
@@ -419,7 +419,7 @@ function VoucherAdminPageContent() {
                 <form className="grid gap-4" onSubmit={handleCreateSeckill}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Input
-                      label="兑换券 ID"
+                      label="优惠券 ID"
                       type="number"
                       min="1"
                       step="1"
