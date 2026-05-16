@@ -17,16 +17,16 @@ http://localhost:3000
 
 ## API Base URL
 
-前端通过 `NEXT_PUBLIC_API_BASE_URL` 直接访问后端。后端需要允许来自前端开发地址的 CORS 请求。
+前端通过 `NEXT_PUBLIC_API_BASE_URL` 访问后端，开发环境默认走本机 nginx 代理。
 
 ```bash
 cp .env.example .env.local
 ```
 
-按本地后端端口修改 `.env.local`：
+如需覆盖默认代理地址，修改 `.env.local`：
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+NEXT_PUBLIC_API_BASE_URL=http://localhost/api
 ```
 
 ## 已实现页面
@@ -39,7 +39,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ## 请求层
 
 - `src/lib/http.ts` 封装统一 `fetch` 请求入口。
-- 通过 `NEXT_PUBLIC_API_BASE_URL` 配置 `baseURL`，默认 `http://localhost:8080`。
+- 通过 `NEXT_PUBLIC_API_BASE_URL` 配置 `baseURL`，默认 `http://localhost/api`。
 - 注册、登录之外的请求默认注入 `Authorization: Bearer <token>`。
 - 响应统一处理 `{ code, message, data }`，并在 401 时清除本地 token。
 

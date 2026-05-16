@@ -9,7 +9,7 @@ import {
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
-  "http://localhost:8080";
+  "http://localhost/api";
 const REQUEST_TIMEOUT_MS = 12000;
 
 type ApiResponse<T> = {
