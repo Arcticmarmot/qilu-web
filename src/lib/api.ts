@@ -342,22 +342,47 @@ export function getHotPostList(input: {
 
   const query = params.toString();
 
-  return request<PostListItem[]>(`/hot/posts${query ? `?${query}` : ""}`).then((posts) =>
-    posts.map((post) => normalizePostListItem(post)),
+  return request<PageResult<PostListItem>>(
+    `/hot/posts${query ? `?${query}` : ""}`,
+  ).then((page) =>
+    ({
+      ...page,
+      records: page.records.map((post) => normalizePostListItem(post)),
+    }),
   );
 }
 
-export function searchPosts(keyword: string) {
-  const normalizedKeyword = keyword.trim();
+export function searchPosts(input: {
+  keyword: string;
+  current?: number;
+  size?: number;
+}) {
+  const normalizedKeyword = input.keyword.trim();
 
   if (!normalizedKeyword) {
-    return Promise.resolve([]);
+    return Promise.resolve({
+      current: input.current ?? 1,
+      size: input.size ?? 0,
+      total: 0,
+      records: [],
+    } satisfies PageResult<PostListItem>);
   }
 
   const params = new URLSearchParams({ keyword: normalizedKeyword });
 
-  return request<PostListItem[]>(`/search/posts?${params.toString()}`).then((posts) =>
-    posts.map((post) => normalizePostListItem(post)),
+  if (input.current) {
+    params.set("current", String(input.current));
+  }
+
+  if (input.size) {
+    params.set("size", String(input.size));
+  }
+
+  return request<PageResult<PostListItem>>(`/search/posts?${params.toString()}`).then(
+    (page) => ({
+      ...page,
+      records: page.records.map((post) => normalizePostListItem(post)),
+    }),
   );
 }
 

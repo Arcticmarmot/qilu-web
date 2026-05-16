@@ -456,6 +456,10 @@ function buildFeedHref(mode: FeedMode, current = 1) {
 
   if (mode === "hot") {
     params.set("mode", "hot");
+    if (current > 1) {
+      params.set("current", String(current));
+      params.set("size", String(POST_PAGE_SIZE));
+    }
   } else if (current > 1) {
     params.set("current", String(current));
     params.set("size", String(POST_PAGE_SIZE));
@@ -463,6 +467,17 @@ function buildFeedHref(mode: FeedMode, current = 1) {
 
   const query = params.toString();
   return query ? `/posts?${query}` : "/posts";
+}
+
+function buildSearchHref(keyword: string, current = 1) {
+  const params = new URLSearchParams({ keyword });
+
+  if (current > 1) {
+    params.set("current", String(current));
+    params.set("size", String(POST_PAGE_SIZE));
+  }
+
+  return `/posts?${params.toString()}`;
 }
 
 function HomeContent() {
@@ -474,8 +489,8 @@ function HomeContent() {
   const mode = readFeedMode(searchParams.get("mode"));
   const keyword = (searchParams.get("keyword") ?? "").trim();
   const [page, setPage] = useState<PageResult<PostListItem> | null>(null);
-  const [hotPosts, setHotPosts] = useState<PostListItem[]>([]);
-  const [searchResults, setSearchResults] = useState<PostListItem[]>([]);
+  const [hotPage, setHotPage] = useState<PageResult<PostListItem> | null>(null);
+  const [searchPage, setSearchPage] = useState<PageResult<PostListItem> | null>(null);
   const [error, setError] = useState("");
   const [likeError, setLikeError] = useState("");
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
@@ -487,19 +502,23 @@ function HomeContent() {
     setError("");
 
     try {
-      setHotPosts([]);
+      setHotPage(null);
       setPage(null);
-      setSearchResults([]);
+      setSearchPage(null);
 
       if (keyword) {
-        const result = await searchPosts(keyword);
-        setSearchResults(result);
+        const result = await searchPosts({
+          keyword,
+          current,
+          size: POST_PAGE_SIZE,
+        });
+        setSearchPage(result);
       } else if (mode === "hot") {
         const result = await getHotPostList({
           current,
           size: POST_PAGE_SIZE,
         });
-        setHotPosts(result);
+        setHotPage(result);
       } else {
         const result = await getPostPage({ current, size: POST_PAGE_SIZE });
         setPage(result);
@@ -523,13 +542,21 @@ function HomeContent() {
     () => Math.max(1, Math.ceil((page?.total ?? 0) / POST_PAGE_SIZE)),
     [page?.total],
   );
+  const hotTotalPages = useMemo(
+    () => Math.max(1, Math.ceil((hotPage?.total ?? 0) / POST_PAGE_SIZE)),
+    [hotPage?.total],
+  );
+  const searchTotalPages = useMemo(
+    () => Math.max(1, Math.ceil((searchPage?.total ?? 0) / POST_PAGE_SIZE)),
+    [searchPage?.total],
+  );
   const fortune = useMemo(() => getDailyFortune(), []);
   const isSearchMode = keyword.length > 0;
   const isHotMode = !isSearchMode && mode === "hot";
   const visiblePosts = isSearchMode
-    ? searchResults
+    ? searchPage?.records ?? []
     : isHotMode
-      ? hotPosts
+      ? hotPage?.records ?? []
       : page?.records ?? [];
 
   const handlePageChange = (nextPage: number) => {
@@ -537,12 +564,22 @@ function HomeContent() {
     router.push(buildFeedHref("latest", boundedPage));
   };
 
+  const handleHotPageChange = (nextPage: number) => {
+    const boundedPage = Math.min(Math.max(1, nextPage), hotTotalPages);
+    router.push(buildFeedHref("hot", boundedPage));
+  };
+
+  const handleSearchPageChange = (nextPage: number) => {
+    const boundedPage = Math.min(Math.max(1, nextPage), searchTotalPages);
+    router.push(buildSearchHref(keyword, boundedPage));
+  };
+
   const handleModeChange = (nextMode: FeedMode) => {
     if (!isSearchMode && nextMode === mode) {
       return;
     }
 
-    router.push(buildFeedHref(nextMode, current));
+    router.push(buildFeedHref(nextMode));
   };
 
   const handleLikeChange = (
@@ -550,16 +587,34 @@ function HomeContent() {
     next: { likedByMe: boolean; likeCount: number },
   ) => {
     if (isSearchMode) {
-      setSearchResults((currentPosts) =>
-        currentPosts.map((post) => (post.id === postId ? { ...post, ...next } : post)),
-      );
+      setSearchPage((currentPage) => {
+        if (!currentPage) {
+          return currentPage;
+        }
+
+        return {
+          ...currentPage,
+          records: currentPage.records.map((post) =>
+            post.id === postId ? { ...post, ...next } : post,
+          ),
+        };
+      });
       return;
     }
 
     if (isHotMode) {
-      setHotPosts((currentPosts) =>
-        currentPosts.map((post) => (post.id === postId ? { ...post, ...next } : post)),
-      );
+      setHotPage((currentPage) => {
+        if (!currentPage) {
+          return currentPage;
+        }
+
+        return {
+          ...currentPage,
+          records: currentPage.records.map((post) =>
+            post.id === postId ? { ...post, ...next } : post,
+          ),
+        };
+      });
       return;
     }
 
@@ -592,47 +647,158 @@ function HomeContent() {
               <h1 className="greeting-title truncate text-2xl font-semibold text-foreground sm:text-3xl">
                 {isSearchMode ? (
                   "搜索结果"
-                ) : isHotMode ? (
-                  "最热帖子"
                 ) : (
                   <AnimatedGreeting />
                 )}
               </h1>
             </div>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="inline-flex rounded-md border border-line bg-soft p-1">
-                <button
-                  type="button"
-                  className={cx(
-                    "rounded-md px-3 py-1.5 text-sm transition",
-                    !isHotMode
-                      ? "bg-foreground text-background"
-                      : "text-foreground hover:text-accent",
-                  )}
-                  onClick={() => handleModeChange("latest")}
-                >
-                  正常模式
-                </button>
-                <button
-                  type="button"
-                  className={cx(
-                    "rounded-md px-3 py-1.5 text-sm transition",
-                    isHotMode
-                      ? "bg-foreground text-background"
-                      : "text-foreground hover:text-accent",
-                  )}
-                  onClick={() => handleModeChange("hot")}
-                >
-                  最热帖子
-                </button>
-              </div>
-              <Link
-                href="/posts/create"
-                className="inline-flex h-9 items-center justify-center rounded-md bg-foreground px-4 text-sm font-medium text-background transition hover:bg-accent-strong"
+            {isSearchMode ? (
+              <div
+                className="mt-4 flex h-[84px] items-start sm:h-9"
+                aria-hidden="true"
               >
-                发布帖子
-              </Link>
-            </div>
+                <svg
+                  viewBox="0 0 720 60"
+                  className="h-14 w-full sm:h-9"
+                  fill="none"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d="M0 50H704"
+                    stroke="#31403A"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <g>
+                    <path
+                      d="M22 49C20 42 17 36 12 30M31 49C33 39 38 31 45 25M48 49C46 41 43 35 38 30M58 49C61 41 67 35 75 32"
+                      stroke="#A1AEA8"
+                      strokeOpacity="0.45"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M48 49C45 38 42 28 36 18M54 49C55 35 61 24 70 14M64 49C66 39 73 32 82 28M88 49C89 42 94 37 101 35"
+                      stroke="#A1AEA8"
+                      strokeOpacity="0.58"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M122 49C120 36 116 27 108 17M130 49C132 36 138 27 148 20M139 49C144 42 151 38 160 37M165 49C163 41 160 35 154 30"
+                      stroke="#A1AEA8"
+                      strokeOpacity="0.5"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M204 49C202 36 197 25 188 15M212 49C213 36 220 24 231 15M222 49C226 40 234 34 245 32M252 49C250 42 246 36 241 30"
+                      stroke="#A1AEA8"
+                      strokeOpacity="0.56"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M286 49C284 38 279 29 271 21M295 49C299 38 306 31 317 27M304 49C305 39 310 31 319 22M331 49C333 41 338 35 346 31"
+                      stroke="#A1AEA8"
+                      strokeOpacity="0.5"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M352 49C349 38 345 29 337 20M360 49C362 38 368 30 378 25M389 49C386 41 381 35 374 31"
+                      stroke="#A1AEA8"
+                      strokeOpacity="0.54"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M438 49C436 37 431 28 423 18M447 49C449 36 456 27 466 20M457 49C462 42 469 38 478 36M492 49C490 41 486 35 480 30"
+                      stroke="#A1AEA8"
+                      strokeOpacity="0.52"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M522 49C519 38 515 29 507 20M531 49C535 37 543 30 554 26M541 49C543 39 548 31 557 22M569 49C571 41 576 36 584 33"
+                      stroke="#A1AEA8"
+                      strokeOpacity="0.5"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M610 49C607 37 602 27 594 18M619 49C621 36 628 27 639 21M629 49C634 41 642 36 652 34M673 49C670 41 666 35 660 30"
+                      stroke="#A1AEA8"
+                      strokeOpacity="0.54"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M95 50C94 43 91 38 86 33M113 50C115 43 119 38 125 35M176 50C174 43 171 37 166 32M267 50C268 43 272 37 279 34M404 50C402 42 398 37 392 33M416 50C418 43 422 38 429 36M500 50C498 43 494 38 488 34M600 50C602 43 606 38 612 35M680 50C682 43 686 38 692 36"
+                      stroke="#A1AEA8"
+                      strokeOpacity="0.42"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M39 30c8 0 14 4 18 12-9 1-16-3-20-10 1-1 1-2 2-2ZM68 27c7-1 13 2 17 8-8 2-14 0-18-6 0-1 0-1 1-2ZM24 37c6 0 11 3 14 9-7 1-13-2-16-8 0-1 1-1 2-1ZM143 30c8-1 14 2 19 9-9 2-16-1-20-7 0-1 0-1 1-2ZM225 28c8-1 15 2 20 9-9 2-17-1-21-7 0-1 0-1 1-2ZM309 34c7-1 13 2 17 8-8 2-14 0-18-6 0-1 0-1 1-2ZM372 31c6-1 12 2 16 7-7 2-13 0-17-5 0-1 0-1 1-2ZM461 30c8-1 14 2 19 9-9 2-16-1-20-7 0-1 0-1 1-2ZM546 33c7-1 13 2 17 8-8 2-14 0-18-6 0-1 0-1 1-2ZM636 28c8-1 15 2 20 9-9 2-17-1-21-7 0-1 0-1 1-2ZM690 34c6-1 12 2 16 7-7 2-13 0-17-5 0-1 0-1 1-2Z"
+                      fill="#74C69D"
+                      opacity="0.34"
+                    />
+                    <path
+                      d="M78 35c5-5 10-5 13 1 5-1 8 4 4 8 2 5-3 8-8 5-4 4-9 1-8-5-5-1-5-6-1-9ZM182 33c5-5 10-4 13 1 5-1 8 4 4 8 2 5-3 8-8 5-4 4-9 1-8-5-5-1-5-6-1-9ZM253 36c5-5 10-4 12 1 5-1 8 4 4 8 2 5-3 8-7 5-4 4-9 1-8-5-5-1-5-6-1-9ZM482 36c5-5 10-4 12 1 5-1 8 4 4 8 2 5-3 8-7 5-4 4-9 1-8-5-5-1-5-6-1-9ZM578 34c5-5 10-4 13 1 5-1 8 4 4 8 2 5-3 8-8 5-4 4-9 1-8-5-5-1-5-6-1-9ZM348 36c5-5 10-5 13 1 5-1 8 4 4 8 2 5-3 8-8 5-4 4-9 1-8-5-5-1-5-6-1-9ZM663 36c5-5 10-4 12 1 5-1 8 4 4 8 2 5-3 8-7 5-4 4-9 1-8-5-5-1-5-6-1-9Z"
+                      fill="#F4D35E"
+                      opacity="0.38"
+                    />
+                    <path
+                      d="M96 39c4-5 9-4 11 1 5-1 8 4 4 8 2 5-3 8-7 5-4 4-9 1-8-5-5-1-5-6 0-9ZM165 37c4-5 9-4 11 1 5-1 8 4 4 8 2 5-3 8-7 5-4 4-9 1-8-5-5-1-5-6 0-9ZM404 38c4-5 9-4 11 1 5-1 8 4 4 8 2 5-3 8-7 5-4 4-9 1-8-5-5-1-5-6 0-9ZM514 38c4-5 9-4 11 1 5-1 8 4 4 8 2 5-3 8-7 5-4 4-9 1-8-5-5-1-5-6 0-9ZM620 38c4-5 9-4 11 1 5-1 8 4 4 8 2 5-3 8-7 5-4 4-9 1-8-5-5-1-5-6 0-9Z"
+                      fill="#D48B8B"
+                      opacity="0.5"
+                    />
+                    <path
+                      d="M126 40c4-4 8-4 10 1 5-1 7 3 4 7 2 5-3 7-7 4-4 3-8 1-7-4-4-1-4-5 0-8ZM295 39c4-4 8-4 10 1 5-1 7 3 4 7 2 5-3 7-7 4-4 3-8 1-7-4-4-1-4-5 0-8ZM452 40c4-4 8-4 10 1 5-1 7 3 4 7 2 5-3 7-7 4-4 3-8 1-7-4-4-1-4-5 0-8Z"
+                      fill="#74C69D"
+                      opacity="0.34"
+                    />
+                  </g>
+                </svg>
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="inline-flex rounded-md border border-line bg-soft p-1">
+                  <button
+                    type="button"
+                    className={cx(
+                      "rounded-md px-3 py-1.5 text-sm transition",
+                      !isHotMode
+                        ? "bg-foreground text-background"
+                        : "text-foreground hover:text-accent",
+                    )}
+                    onClick={() => handleModeChange("latest")}
+                  >
+                    正常模式
+                  </button>
+                  <button
+                    type="button"
+                    className={cx(
+                      "rounded-md px-3 py-1.5 text-sm transition",
+                      isHotMode
+                        ? "bg-foreground text-background"
+                        : "text-foreground hover:text-accent",
+                    )}
+                    onClick={() => handleModeChange("hot")}
+                  >
+                    最热帖子
+                  </button>
+                </div>
+                <Link
+                  href="/posts/create"
+                  className="inline-flex h-9 items-center justify-center rounded-md bg-foreground px-4 text-sm font-medium text-background transition hover:bg-accent-strong"
+                >
+                  发布帖子
+                </Link>
+              </div>
+            )}
           </div>
 
           <div>
@@ -659,7 +825,19 @@ function HomeContent() {
                     />
                   ))}
                 </div>
-                {isSearchMode || isHotMode ? null : (
+                {isSearchMode ? (
+                  <Pagination
+                    current={searchPage?.current || current}
+                    total={searchPage?.total ?? 0}
+                    onChange={handleSearchPageChange}
+                  />
+                ) : isHotMode ? (
+                  <Pagination
+                    current={hotPage?.current || current}
+                    total={hotPage?.total ?? 0}
+                    onChange={handleHotPageChange}
+                  />
+                ) : (
                   <Pagination
                     current={page?.current || current}
                     total={page?.total ?? 0}
@@ -668,22 +846,37 @@ function HomeContent() {
                 )}
               </>
             ) : (
-              <EmptyState
-                title={
-                  isSearchMode
-                    ? "没有匹配的帖子"
-                    : isHotMode
-                      ? "还没有最热帖子"
-                      : "还没有帖子"
-                }
-                description={
-                  isSearchMode
-                    ? "换一个关键词再试试，搜索会匹配标题、分支提示和正文。"
-                    : isHotMode
-                    ? "当前日榜还没有可展示的帖子，可以先发布或互动后再回来测试接口。"
-                    : "发布第一篇帖子后，这里会出现公开内容流。"
-                }
-              />
+              <>
+                <EmptyState
+                  title={
+                    isSearchMode
+                      ? "没有匹配的帖子"
+                      : isHotMode
+                        ? "还没有最热帖子"
+                        : "还没有帖子"
+                  }
+                  description={
+                    isSearchMode
+                      ? "换一个关键词再试试，搜索会匹配标题、分支提示和正文。"
+                      : isHotMode
+                        ? "当前日榜还没有可展示的帖子，可以先发布或互动后再回来测试接口。"
+                        : "发布第一篇帖子后，这里会出现公开内容流。"
+                  }
+                />
+                {isSearchMode && (searchPage?.total || current > 1) ? (
+                  <Pagination
+                    current={searchPage?.current || current}
+                    total={searchPage?.total ?? 0}
+                    onChange={handleSearchPageChange}
+                  />
+                ) : isHotMode && (hotPage?.total || current > 1) ? (
+                  <Pagination
+                    current={hotPage?.current || current}
+                    total={hotPage?.total ?? 0}
+                    onChange={handleHotPageChange}
+                  />
+                ) : null}
+              </>
             )}
           </div>
         </section>
