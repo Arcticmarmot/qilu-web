@@ -83,3 +83,44 @@ a[href] {
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
+
+.greeting-title {
+  font-family: "Comic Sans MS", "Comic Sans", "Marker Felt", "PingFang SC",
+    "Microsoft YaHei", cursive;
+  letter-spacing: 0;
+}
+
+.greeting-scramble {
+  min-height: 1.25em;
+  font-variant-ligatures: none;
+  text-wrap: nowrap;
+}
+
+.fortune-date {
+  font-family: "Comic Sans MS", "Comic Sans", "Marker Felt", "PingFang SC",
+    "Microsoft YaHei", cursive;
+  letter-spacing: 0;
+}
+
+.fortune-bouquet {
+  animation: fortune-sway 6.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+@keyframes fortune-sway {
+  0%,
+  100% {
+    transform: rotate(-0.7deg) translateX(-0.4px);
+  }
+
+  50% {
+    transform: rotate(0.9deg) translateX(0.6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fortune-bouquet {
+    animation: none;
+  }
+}

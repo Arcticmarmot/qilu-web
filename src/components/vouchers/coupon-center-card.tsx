@@ -22,8 +22,7 @@ export function CouponCenterCard() {
     <div className="overflow-hidden rounded-md border border-line bg-panel shadow-subtle">
       <div className="p-5">
         <div className="border-b border-line pb-4">
-          <p className="text-xs tracking-[0.24em] text-muted">ACTIVITY</p>
-          <h2 className="mt-1 text-lg font-semibold text-foreground">活动中心</h2>
+          <h2 className="text-lg font-semibold text-foreground">活动中心</h2>
         </div>
 
         <nav className="mt-4 grid gap-3" aria-label="活动中心">

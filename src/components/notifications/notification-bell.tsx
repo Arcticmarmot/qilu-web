@@ -278,7 +278,7 @@ function NotificationTypeButton({
     <button
       type="button"
       className={cx(
-        "relative inline-flex h-9 min-w-20 items-center justify-center gap-1.5 rounded-md border border-line bg-soft px-2.5 text-sm text-foreground transition hover:border-accent hover:text-accent",
+        "relative inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-md border border-line bg-soft px-2 text-sm text-foreground transition hover:border-accent hover:text-accent",
         active ? "border-accent text-accent" : "",
       )}
       onClick={onClick}
@@ -407,7 +407,7 @@ function NotificationButtons({
   onModeClick: (mode: NotificationMode) => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="grid w-full grid-cols-3 gap-2">
       {NOTIFICATION_MODES.map((mode) => (
         <NotificationTypeButton
           key={mode}

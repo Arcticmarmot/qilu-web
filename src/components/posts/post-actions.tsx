@@ -39,10 +39,16 @@ export function SocialActions({
   };
 
   return (
-    <div className={cx("flex flex-wrap items-center gap-2", compact ? "" : "rounded-md border border-line bg-soft p-2")}>
+    <div
+      className={cx(
+        "flex flex-wrap items-center",
+        compact ? "gap-1.5" : "gap-2 rounded-md border border-line bg-soft p-2",
+      )}
+    >
       <LikeButton
         liked={likedByMe}
         count={likeCount}
+        size={compact ? "sm" : "md"}
         onLike={() => likePost(postId)}
         onUnlike={() => unlikePost(postId)}
         onChange={onLikeChange}
@@ -57,7 +63,10 @@ export function SocialActions({
       {commentHref ? (
         <Link
           href={commentHref}
-          className="inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-md border border-line bg-transparent px-2 text-sm font-medium text-muted transition hover:border-accent hover:text-accent"
+          className={cx(
+            "inline-flex items-center justify-center rounded-md border border-line bg-transparent font-medium text-muted transition hover:border-accent hover:text-accent",
+            compact ? "h-8 min-w-8 gap-1 px-2 text-xs" : "h-9 min-w-9 gap-1.5 px-2 text-sm",
+          )}
           title="查看评论"
           aria-label="评论"
         >
@@ -70,11 +79,12 @@ export function SocialActions({
         <button
           type="button"
           className={cx(
-            "inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-md border px-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-65",
+            "inline-flex items-center justify-center rounded-md border font-medium transition disabled:cursor-not-allowed disabled:opacity-65",
             commentsEnabled
               ? "border-line bg-transparent text-muted hover:border-accent hover:text-accent"
               : "border-line text-muted opacity-65",
             compact || commentsEnabled ? "bg-transparent" : "bg-panel",
+            compact ? "h-8 min-w-8 gap-1 px-2 text-xs" : "h-9 min-w-9 gap-1.5 px-2 text-sm",
           )}
           disabled={!commentsEnabled}
           title={commentsEnabled ? "查看评论" : "进入详情后评论"}
@@ -115,7 +125,8 @@ function DisabledAction({
     <button
       type="button"
       className={cx(
-        "inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-line px-2 text-sm font-medium text-muted opacity-65",
+        "inline-flex items-center justify-center rounded-md border border-line px-2 font-medium text-muted opacity-65",
+        compact ? "h-8 min-w-8 text-xs" : "h-9 min-w-9 text-sm",
         compact ? "bg-transparent" : "bg-panel",
       )}
       disabled
