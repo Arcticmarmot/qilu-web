@@ -186,8 +186,8 @@ function FortuneCard({ fortune }: { fortune: DailyFortune }) {
     <div className="relative flex flex-1 overflow-hidden rounded-md border border-line bg-panel p-4 shadow-subtle">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(116,198,157,0.2),transparent_36%),linear-gradient(180deg,rgba(240,238,231,0.045),rgba(16,20,19,0))]" />
       <div className="relative flex w-full flex-col justify-between rounded-md border border-line bg-[#17241f] p-5 text-foreground">
-        <div>
-          <div className="mx-auto flex h-28 w-full max-w-44 items-center justify-center">
+        <div className="pt-4">
+          <div className="mx-auto mt-5 flex h-28 w-full max-w-44 items-center justify-center">
             <svg
               viewBox="0 0 176 128"
               className="fortune-flower h-full w-full"
@@ -281,22 +281,22 @@ function FortuneCard({ fortune }: { fortune: DailyFortune }) {
             </svg>
           </div>
 
-          <div className="mt-5 text-center">
+          <div className="mt-10 text-center">
             <p className="fortune-date text-sm font-medium text-muted">
               {fortune.dateText}
             </p>
-            <p className="mt-3 text-2xl font-semibold text-accent">
+            <p className="mt-5 text-2xl font-semibold text-accent">
               {fortune.label}
             </p>
             <p className="mt-2 text-sm text-accent-strong">{fortune.tone}</p>
           </div>
         </div>
 
-        <div className="mt-6 border-t border-line pt-5">
-          <p className="text-sm leading-7 text-muted">{fortune.message}</p>
-          <div className="mt-5 flex items-center justify-between text-xs text-muted">
+        <div className="mt-4 border-t border-line pt-3">
+          <p className="text-base leading-7 text-muted">{fortune.message}</p>
+          <div className="mt-10 flex items-center justify-between text-xs text-muted">
             <span>签序 {String(fortune.score).padStart(2, "0")}</span>
-            <span>心平路顺</span>
+            <span>平安喜乐</span>
           </div>
         </div>
       </div>

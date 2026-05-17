@@ -603,19 +603,6 @@ export function markReplyNotificationsReadAll() {
   });
 }
 
-export type VoucherInput = {
-  title: string;
-  description: string;
-};
-
-export type VoucherSeckillInput = {
-  voucherId: number;
-  totalStock: number;
-  startTime: string;
-  endTime: string;
-  redeemDeadline: string;
-};
-
 export type VoucherSeckill = {
   seckillId: number;
   voucherId: number;
@@ -677,31 +664,4 @@ export function getVoucherOrderDetail(orderNo: string) {
   return request<VoucherOrder>(
     `/voucher-orders/${encodeURIComponent(orderNo)}`,
   );
-}
-
-export function createVoucher(input: VoucherInput) {
-  return request<unknown>("/admin/vouchers", {
-    method: "POST",
-    body: input,
-  });
-}
-
-export function createVoucherSeckill(input: VoucherSeckillInput) {
-  return request<unknown>("/admin/voucher-seckills", {
-    method: "POST",
-    body: input,
-  });
-}
-
-export function preheatVoucherSeckill(seckillId: number) {
-  return request<unknown>(`/admin/voucher-seckills/${seckillId}/preheat`, {
-    method: "POST",
-  });
-}
-
-export function redeemVoucherOrder(redeemCode: string) {
-  return request<unknown>("/admin/voucher-orders/redeem", {
-    method: "PATCH",
-    body: { redeemCode },
-  });
 }
